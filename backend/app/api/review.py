@@ -58,7 +58,20 @@ def reject_asset(asset_id: int, request: RejectRequest, db: Session = Depends(ge
     )
     db.add(feedback)
     
-    # Send it back to draft (or rejected)
     asset.status = ContentStatus.draft 
     db.commit()
     return {"message": "Asset rejected and feedback recorded"}
+
+@router.get("/metrics")
+def get_metrics(db: Session = Depends(get_db)):
+    from app.agents.lessons import get_rejection_rate, get_edit_intensity
+    return {
+        "rejection_rate": get_rejection_rate(db),
+        "edit_intensity": get_edit_intensity(db)
+    }
+
+@router.get("/leads")
+def get_leads(db: Session = Depends(get_db)):
+    from app.models.lead import Lead
+    leads = db.query(Lead).all()
+    return leads
