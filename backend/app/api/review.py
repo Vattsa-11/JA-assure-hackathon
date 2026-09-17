@@ -73,5 +73,6 @@ def get_metrics(db: Session = Depends(get_db)):
 @router.get("/leads")
 def get_leads(db: Session = Depends(get_db)):
     from app.models.lead import Lead
+    from app.schemas.review import LeadSchema
     leads = db.query(Lead).all()
-    return leads
+    return [LeadSchema.model_validate(l) for l in leads]

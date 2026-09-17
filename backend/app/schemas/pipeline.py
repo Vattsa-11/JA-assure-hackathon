@@ -8,3 +8,7 @@ class LeadRunRequest(BaseModel):
     brand_id: int
     niche: str
     region: str
+
+class VideoRunRequest(BaseModel):
+    brand_id: int
+    topic: str
