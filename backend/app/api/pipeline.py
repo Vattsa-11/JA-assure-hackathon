@@ -14,18 +14,28 @@ from app.schemas.pipeline import (
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/pipeline", tags=["Pipeline"])
 
-def _run_content(brand_id: int, topic: str):
+def _run_content(
+    brand_id: int,
+    topic: str,
+    localize: bool = False,
+    target_languages: list[str] | None = None,
+):
     initial_state: ContentState = {
         "brand_id": brand_id,
         "topic": topic,
         "generated_asset_ids": [],
         "passed_asset_ids": [],
-        "failed_asset_ids": []
+        "failed_asset_ids": [],
+        "localize": localize,
+        "target_languages": target_languages or [],
+        "localized_asset_ids": [],
+        "localized_failed_ids": [],
     }
     result = content_graph.invoke(initial_state)
     logger.info(
         f"Content pipeline done. Passed: {result.get('passed_asset_ids')}, "
-        f"Failed: {result.get('failed_asset_ids')}"
+        f"Failed: {result.get('failed_asset_ids')}, "
+        f"Localized: {result.get('localized_asset_ids')}"
     )
 
 def _run_leads(brand_id: int, niche: str, region: str):
@@ -44,10 +54,18 @@ def _run_leads(brand_id: int, niche: str, region: str):
 def run_content_pipeline(request: ContentRunRequest, background_tasks: BackgroundTasks):
     """
     Triggers the content generation + compliance pipeline as a background task.
+    Optionally localizes every compliance-passed asset (ms/id/th/zh), with each
+    localized version independently compliance-checked.
     Returns immediately so the browser doesn't time out.
     """
-    background_tasks.add_task(_run_content, request.brand_id, request.topic)
-    return {"message": "Content pipeline started in background. Check /review/queue for results shortly."}
+    background_tasks.add_task(
+        _run_content, request.brand_id, request.topic, request.localize, request.target_languages
+    )
+    message = "Content pipeline started in background."
+    if request.localize:
+        message += " Localized versions will appear after compliance checks."
+    message += " Check /review/queue for results shortly."
+    return {"message": message}
 
 @router.post("/leads/run")
 def run_lead_pipeline(request: LeadRunRequest, background_tasks: BackgroundTasks):

@@ -22,6 +22,7 @@ export default function UnifiedDashboard() {
   const [topic, setTopic] = useState("");
   const [platforms, setPlatforms] = useState({ twitter: true, linkedin: true, facebook: false, instagram: false });
   const [generateVideo, setGenerateVideo] = useState(false);
+  const [localize, setLocalize] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Modal State
@@ -70,7 +71,7 @@ export default function UnifiedDashboard() {
       await fetch(`${API_URL}/pipeline/content/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brand_id: parseInt(selectedBrand), topic })
+        body: JSON.stringify({ brand_id: parseInt(selectedBrand), topic, localize })
       });
 
       if (generateVideo) {
@@ -209,6 +210,10 @@ export default function UnifiedDashboard() {
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>
                   <input type="checkbox" checked={generateVideo} onChange={e => setGenerateVideo(e.target.checked)} style={{ width: 'auto' }} />
                   Include Video
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600 }} title="After compliance, also generate localized versions in Malay, Indonesian, Thai and Simplified Chinese">
+                  <input type="checkbox" checked={localize} onChange={e => setLocalize(e.target.checked)} style={{ width: 'auto' }} />
+                  Localize (MS/ID/TH/ZH)
                 </label>
               </div>
               <button type="submit" className="btn btn-white" disabled={isGenerating} style={{ height: '48px', padding: '0 2rem' }}>
