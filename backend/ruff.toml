@@ -1,0 +1,32 @@
+# Ruff configuration for the JA Assure backend (FastAPI + LangGraph).
+# Run from backend/: `python -m ruff check app`
+
+line-length = 100
+
+[lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes (unused imports/variables)
+    "I",   # import sorting
+    "UP",  # pyupgrade (modern typing/annotations)
+    "B",   # flake8-bugbear (common bug patterns)
+    "RUF", # ruff-specific rules
+    "BLE", # flake8-blind-except
+]
+
+ignore = [
+    "E501", # line length — a formatter concern, not a correctness error
+]
+
+[lint.flake8-bugbear]
+# FastAPI's dependency-injection pattern intentionally uses calls in
+# parameter defaults (e.g. `db: Session = Depends(get_db)`), so teach
+# bugbear that these calls are immutable defaults instead of disabling B008.
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Body",
+    "fastapi.Header",
+    "fastapi.HTTPException",
+]

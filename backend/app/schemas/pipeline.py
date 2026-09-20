@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class ContentRunRequest(BaseModel):
     brand_id: int
     topic: str

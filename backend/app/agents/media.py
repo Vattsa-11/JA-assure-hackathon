@@ -1,12 +1,14 @@
+import logging
 import uuid
+
 from sqlalchemy.orm import Session
-from app.models.content import ContentAsset, ContentVersion, ContentStatus
-from app.models.media import VideoAsset
+
+from app.agents.compliance import check_compliance
 from app.models.brand import Brand
+from app.models.content import ContentAsset, ContentStatus, ContentVersion
+from app.models.media import VideoAsset
 from app.services.llm_client import llm_client
 from app.services.tts_video_client import tts_video_client
-from app.agents.compliance import check_compliance
-import logging
 
 logger = logging.getLogger(__name__)
 

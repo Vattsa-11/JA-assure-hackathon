@@ -1,18 +1,20 @@
-from typing import TypedDict, List
-from langgraph.graph import StateGraph, START, END
-from app.core.db import SessionLocal
-from app.agents.content import generate_content
-from app.agents.compliance import check_compliance
 import logging
+from typing import TypedDict
+
+from langgraph.graph import END, START, StateGraph
+
+from app.agents.compliance import check_compliance
+from app.agents.content import generate_content
+from app.core.db import SessionLocal
 
 logger = logging.getLogger(__name__)
 
 class ContentState(TypedDict):
     brand_id: int
     topic: str
-    generated_asset_ids: List[int]
-    passed_asset_ids: List[int]
-    failed_asset_ids: List[int]
+    generated_asset_ids: list[int]
+    passed_asset_ids: list[int]
+    failed_asset_ids: list[int]
 
 def generate_node(state: ContentState) -> dict:
     db = SessionLocal()
@@ -36,7 +38,7 @@ def compliance_node(state: ContentState) -> dict:
                 else:
                     failed.append(asset_id)
                     logger.info(f"Asset {asset_id} FAILED compliance. Phrases: {review.flagged_phrases}")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 -- fail-soft: route the failed asset through, keep the graph alive
                 logger.error(f"Compliance check error for asset {asset_id}: {e}")
                 failed.append(asset_id)
         return {"passed_asset_ids": passed, "failed_asset_ids": failed}

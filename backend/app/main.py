@@ -1,8 +1,12 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.review import router as review_router
-from app.api.pipeline import router as pipeline_router
+from fastapi.staticfiles import StaticFiles
+
 from app.api.dashboard import router as dashboard_router
+from app.api.pipeline import router as pipeline_router
+from app.api.review import router as review_router
 
 app = FastAPI(title="JA Assure AI Marketing Agent")
 
@@ -13,9 +17,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-from fastapi.staticfiles import StaticFiles
-import os
 
 app.include_router(review_router)
 app.include_router(pipeline_router)

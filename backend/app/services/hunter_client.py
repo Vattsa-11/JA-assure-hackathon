@@ -34,10 +34,10 @@ class HunterClient:
                 return emails[0].get("value")
             return None
         except requests.RequestException as e:
-            logger.warning(f"Hunter API request failed for domain {domain}: {str(e)}")
+            logger.warning(f"Hunter API request failed for domain {domain}: {e!s}")
             return None
-        except Exception as e:
-            logger.error(f"Unexpected error in Hunter client: {str(e)}")
+        except Exception as e:  # noqa: BLE001 -- fail-soft: Hunter is best-effort enrichment, log and return None
+            logger.error(f"Unexpected error in Hunter client: {e!s}")
             return None
 
 

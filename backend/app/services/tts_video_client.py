@@ -1,8 +1,9 @@
-import os
 import asyncio
 import logging
-import edge_tts
+import os
 from pathlib import Path
+
+import edge_tts
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +41,8 @@ class TTSVideoClient:
         try:
             asyncio.run(self._generate_audio_async(text, output_path, voice))
             return os.path.exists(output_path)
-        except Exception as e:
-            logger.error(f"Failed to generate TTS audio: {str(e)}")
+        except Exception as e:  # noqa: BLE001 -- fail-soft: TTS is optional, log and report failure to caller
+            logger.error(f"Failed to generate TTS audio: {e!s}")
             return False
 
     def assemble_video(self, script_text: str, audio_path: str, output_video_path: str, bg_color: str = "#202020") -> bool:
@@ -63,7 +64,7 @@ class TTSVideoClient:
             audio_clip = AudioFileClip(audio_path)
             duration = audio_clip.duration
             bg_rgb = hex_to_rgb(bg_color)
-            
+
             if MOVIEPY_V2:
                 bg_clip = ColorClip(size=(1080, 1920), color=bg_rgb).with_duration(duration)
             else:
@@ -72,14 +73,14 @@ class TTSVideoClient:
             words = script_text.split()
             if not words:
                 words = ["(No", "audio)"]
-            
+
             chunk_size = 7
             chunks = [" ".join(words[i:i+chunk_size]) for i in range(0, len(words), chunk_size)]
             words_per_sec = len(words) / duration if duration > 0 else 1
-            
+
             clips = [bg_clip]
             current_time = 0.0
-            
+
             for chunk in chunks:
                 chunk_duration = len(chunk.split()) / words_per_sec
                 if current_time >= duration:
@@ -115,9 +116,9 @@ class TTSVideoClient:
                             .set_duration(chunk_duration)
                         )
                     clips.append(txt_clip)
-                except Exception as e:
+                except Exception as e:  # noqa: BLE001 -- fail-soft: skip one bad caption chunk, keep rendering
                     logger.warning(f"TextClip failed for chunk: {e}")
-                
+
                 current_time += chunk_duration
 
             if MOVIEPY_V2:
@@ -137,8 +138,8 @@ class TTSVideoClient:
             audio_clip.close()
             video.close()
             return os.path.exists(output_video_path)
-        except Exception as e:
-            logger.error(f"Failed to assemble video: {str(e)}")
+        except Exception as e:  # noqa: BLE001 -- fail-soft: video assembly is optional, log and report failure to caller
+            logger.error(f"Failed to assemble video: {e!s}")
             return False
 
     @staticmethod

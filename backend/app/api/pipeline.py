@@ -1,8 +1,15 @@
+import logging
+
 from fastapi import APIRouter, BackgroundTasks
-from app.schemas.pipeline import ContentRunRequest, LeadRunRequest, VideoRunRequest, ResearchRunRequest
+
 from app.graphs.content_pipeline import ContentState, content_graph
 from app.graphs.lead_pipeline import LeadState, lead_graph
-import logging
+from app.schemas.pipeline import (
+    ContentRunRequest,
+    LeadRunRequest,
+    ResearchRunRequest,
+    VideoRunRequest,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/pipeline", tags=["Pipeline"])
@@ -56,12 +63,12 @@ def run_video_pipeline(request: VideoRunRequest, background_tasks: BackgroundTas
     Triggers video script generation + TTS + assembly as a background task.
     """
     def _run_video(brand_id: int, topic: str):
-        from app.core.db import SessionLocal
         from app.agents.media import generate_video_script_and_render
+        from app.core.db import SessionLocal
         db = SessionLocal()
         try:
             generate_video_script_and_render(db, brand_id, topic)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 -- background task: log the failure, never crash the server
             logger.error(f"Video pipeline error: {e}")
         finally:
             db.close()
@@ -72,13 +79,13 @@ def run_video_pipeline(request: VideoRunRequest, background_tasks: BackgroundTas
 @router.post('/research/run')
 def run_research_pipeline(request: ResearchRunRequest, background_tasks: BackgroundTasks):
     def _run_research(urls: list[str]):
-        from app.core.db import SessionLocal
         from app.agents.research import run_competitor_digest
+        from app.core.db import SessionLocal
         db = SessionLocal()
         try:
             results = run_competitor_digest(db, urls)
             logger.info(f'Research pipeline done. Digested {len(results)} updates.')
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 -- background task: log the failure, never crash the server
             logger.error(f'Research pipeline error: {e}')
         finally:
             db.close()

@@ -1,16 +1,17 @@
+
 from pydantic import BaseModel
-from typing import Optional
+
 
 class LeadSchema(BaseModel):
     id: int
     business_name: str
-    website: Optional[str] = None
-    email: Optional[str] = None
+    website: str | None = None
+    email: str | None = None
     niche: str
     region: str
-    fit_score: Optional[int] = None
-    fit_reason: Optional[str] = None
-    draft_outreach: Optional[str] = None
+    fit_score: int | None = None
+    fit_reason: str | None = None
+    draft_outreach: str | None = None
     status: str
 
     class Config:

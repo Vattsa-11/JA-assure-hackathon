@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 from typing import Any
 
@@ -8,8 +9,6 @@ from langchain_groq import ChatGroq
 from pydantic import SecretStr
 
 from app.core.config import settings
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -66,10 +65,10 @@ class LLMClient:
             except Exception as e:
                 if attempt < max_retries - 1:
                     wait_time = 2 ** attempt * 5  # 5s, 10s
-                    logger.warning(f"Rate limited or error on LLM text generation. Retrying in {wait_time}s... (Attempt {attempt+1}/{max_retries}): {str(e)}")
+                    logger.warning(f"Rate limited or error on LLM text generation. Retrying in {wait_time}s... (Attempt {attempt+1}/{max_retries}): {e!s}")
                     time.sleep(wait_time)
                 else:
-                    logger.error(f"Error calling LLM after {max_retries} attempts: {str(e)}")
+                    logger.error(f"Error calling LLM after {max_retries} attempts: {e!s}")
                     raise
         raise RuntimeError("LLM text generation failed after all retries")
 
@@ -94,15 +93,15 @@ class LLMClient:
                     content = content[3:-3]
                 return json.loads(content.strip())
             except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse JSON from LLM response. Error: {str(e)}. Response content: {content}")
+                logger.error(f"Failed to parse JSON from LLM response. Error: {e!s}. Response content: {content}")
                 raise  # Don't retry on bad JSON syntax here, mostly for 429 limits
             except Exception as e:
                 if attempt < max_retries - 1:
                     wait_time = 2 ** attempt * 5  # 5s, 10s
-                    logger.warning(f"Rate limited or error on LLM JSON generation. Retrying in {wait_time}s... (Attempt {attempt+1}/{max_retries}): {str(e)}")
+                    logger.warning(f"Rate limited or error on LLM JSON generation. Retrying in {wait_time}s... (Attempt {attempt+1}/{max_retries}): {e!s}")
                     time.sleep(wait_time)
                 else:
-                    logger.error(f"Error calling LLM for JSON after {max_retries} attempts: {str(e)}")
+                    logger.error(f"Error calling LLM for JSON after {max_retries} attempts: {e!s}")
                     raise
         raise RuntimeError("LLM JSON generation failed after all retries")
 

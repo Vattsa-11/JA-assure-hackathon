@@ -4,6 +4,7 @@ from sqlalchemy import JSON, Boolean, Enum, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
+from app.models.brand import Brand
 
 
 class ContentStatus(str, enum.Enum):
@@ -74,6 +75,3 @@ class Feedback(BaseModel):
     )
     reason_tag: Mapped[str] = mapped_column(String, nullable=False)
     note: Mapped[str] = mapped_column(String, nullable=False)
-
-
-from app.models.brand import Brand

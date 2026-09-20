@@ -1,6 +1,13 @@
 from sqlalchemy.orm import Session
-from app.models.content import ContentAsset, ContentVersion, ComplianceReview, ContentStatus
+
+from app.models.content import (
+    ComplianceReview,
+    ContentAsset,
+    ContentStatus,
+    ContentVersion,
+)
 from app.services.llm_client import llm_client
+
 
 def check_compliance(db: Session, asset_id: int) -> ComplianceReview:
     """
@@ -118,6 +125,6 @@ Return JSON ONLY in this exact format:
         lead.status = LeadStatus.pending_review
         db.commit()
         db.refresh(lead)
-    
+
     return passed
 
