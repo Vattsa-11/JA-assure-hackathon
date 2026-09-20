@@ -76,4 +76,4 @@ class Feedback(BaseModel):
     note: Mapped[str] = mapped_column(String, nullable=False)
 
 
-from app.models.brand import Brand  # noqa: E402  (needed for Mapped["Brand"] resolution)
+from app.models.brand import Brand
