@@ -19,6 +19,12 @@ ignore = [
     "E501", # line length — a formatter concern, not a correctness error
 ]
 
+[lint.per-file-ignores]
+# Standalone verification scripts: they legitimately import app modules after
+# inserting the repo path into sys.path, and their comments quote Thai/Chinese
+# sample content.
+"tests/verify_*.py" = ["E402", "RUF003"]
+
 [lint.flake8-bugbear]
 # FastAPI's dependency-injection pattern intentionally uses calls in
 # parameter defaults (e.g. `db: Session = Depends(get_db)`), so teach

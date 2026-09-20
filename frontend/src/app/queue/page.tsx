@@ -10,13 +10,23 @@ const PLATFORM_LIMITS: Record<string, number> = {
   instagram: 2200
 };
 
+// One entry of GET /review/queue.
+interface QueueAsset {
+  id: number;
+  brand_id: number;
+  brand_name: string;
+  platform: string;
+  language: string;
+  content_text: string;
+}
+
 export default function QueuePage() {
-  const [assets, setAssets] = useState<any[]>([]);
+  const [assets, setAssets] = useState<QueueAsset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
   // Modal State
-  const [viewingAsset, setViewingAsset] = useState<any>(null);
+  const [viewingAsset, setViewingAsset] = useState<QueueAsset | null>(null);
   const [editText, setEditText] = useState("");
   
   // Reject State (inside modal)
@@ -32,8 +42,8 @@ export default function QueuePage() {
       if (!res.ok) throw new Error(`API error: ${res.status}`);
       const data = await res.json();
       setAssets(data);
-    } catch (e: any) {
-      setError(e.message || 'Failed to load queue. Is the backend running?');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load queue. Is the backend running?');
     } finally {
       setLoading(false);
     }
@@ -47,8 +57,8 @@ export default function QueuePage() {
       if (!res.ok) throw new Error(`Approve failed: ${res.status}`);
       setAssets(prev => prev.filter(a => a.id !== id));
       closeModal();
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -63,8 +73,8 @@ export default function QueuePage() {
       if (!res.ok) throw new Error(`Edit failed: ${res.status}`);
       setAssets(prev => prev.filter(a => a.id !== viewingAsset.id));
       closeModal();
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -80,12 +90,12 @@ export default function QueuePage() {
       if (!res.ok) throw new Error(`Reject failed: ${res.status}`);
       setAssets(prev => prev.filter(a => a.id !== viewingAsset.id));
       closeModal();
-    } catch (e: any) {
-      alert(e.message);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : String(e));
     }
   };
 
-  const openModal = (asset: any) => {
+  const openModal = (asset: QueueAsset) => {
     setViewingAsset(asset);
     setEditText(asset.content_text);
     setIsRejecting(false);

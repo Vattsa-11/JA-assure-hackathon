@@ -1,14 +1,15 @@
 import sys
-from pathlib import Path
 
 backend_dir = r"c:\Users\sharv\Downloads\hackthon\ja-assure-marketing-agent\backend"
 sys.path.append(backend_dir)
 
+import json
+
+from app.agents.lead import find_leads
 from app.core.db import SessionLocal
 from app.models.brand import Brand
-from app.agents.lead import find_leads
-import json
 from app.services.osm_client import osm_client
+
 
 def prove_osm_leads():
     # Monkey patch osm_client to intercept the raw response
@@ -16,7 +17,7 @@ def prove_osm_leads():
     intercepted_raw_data = []
 
     def patched_find_businesses(niche, region, limit=5):
-        print(f"\n--- INTERCEPTING OSM OVERPASS API QUERY ---")
+        print("\n--- INTERCEPTING OSM OVERPASS API QUERY ---")
         print(f"Niche: {niche}, Region: {region}, Limit: {limit}")
         results = original_find_businesses(niche, region, limit)
         intercepted_raw_data.extend(results)
@@ -36,7 +37,7 @@ def prove_osm_leads():
 
         print("\n--- PHASE 1: RUNNING LEAD PIPELINE (OSM -> Scrape -> LLM) ---")
         leads = find_leads(db, brand.id, "jewelry", "Singapore")
-        
+
         print("\n--- PHASE 2: VERIFYING DB OUTPUT ---")
         for lead in leads:
             print(f"Business Name: {lead.business_name}")
@@ -47,7 +48,7 @@ def prove_osm_leads():
             print("Draft Outreach:")
             print(lead.draft_outreach)
             print("="*60)
-            
+
         print("\nProof complete! OSM data was directly used to create these leads.")
     finally:
         db.close()

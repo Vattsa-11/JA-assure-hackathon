@@ -10,10 +10,32 @@ const PLATFORM_LIMITS: Record<string, number> = {
   instagram: 2200
 };
 
+interface Brand {
+  id: number;
+  name: string;
+}
+
+// One entry of /dashboard/feed: a generated asset, a lead draft, or a video.
+interface FeedItem {
+  id: number;
+  type: string;
+  status: string;
+  platform: string;
+  brand_name?: string;
+  business_name?: string;
+  topic?: string;
+  language?: string;
+  content_text: string;
+  draft_outreach: string;
+  video_file_path?: string;
+  lessons?: string[];
+  created_at?: string;
+}
+
 export default function UnifiedDashboard() {
-  const [brands, setBrands] = useState<any[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0, videos: 0 });
-  const [feed, setFeed] = useState<any[]>([]);
+  const [feed, setFeed] = useState<FeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
 
@@ -26,7 +48,7 @@ export default function UnifiedDashboard() {
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Modal State
-  const [viewingItem, setViewingItem] = useState<any>(null);
+  const [viewingItem, setViewingItem] = useState<FeedItem | null>(null);
   const [editText, setEditText] = useState("");
   const [isRejecting, setIsRejecting] = useState(false);
   const [rejectTag, setRejectTag] = useState("tone");
@@ -43,7 +65,7 @@ export default function UnifiedDashboard() {
       if (statsRes.ok) setStats(await statsRes.json());
       if (feedRes.ok) setFeed(await feedRes.json());
       if (brandsRes.ok) {
-        const brandsData = await brandsRes.json();
+        const brandsData: Brand[] = await brandsRes.json();
         setBrands(brandsData);
         if (!selectedBrand && brandsData.length > 0) {
           setSelectedBrand(brandsData[0].id.toString());
@@ -96,7 +118,7 @@ export default function UnifiedDashboard() {
       await fetch(`${API_URL}/review/${id}/approve`, { method: 'POST' });
       fetchDashboard();
       closeModal();
-    } catch (e: any) { alert(e.message); }
+    } catch (e) { alert(e instanceof Error ? e.message : String(e)); }
   };
 
   const handleSaveEdit = async () => {
@@ -109,7 +131,7 @@ export default function UnifiedDashboard() {
       });
       fetchDashboard();
       closeModal();
-    } catch (e: any) { alert(e.message); }
+    } catch (e) { alert(e instanceof Error ? e.message : String(e)); }
   };
 
   const handleReject = async (e: React.FormEvent) => {
@@ -123,10 +145,10 @@ export default function UnifiedDashboard() {
       });
       fetchDashboard();
       closeModal();
-    } catch (e: any) { alert(e.message); }
+    } catch (e) { alert(e instanceof Error ? e.message : String(e)); }
   };
 
-  const openModal = (item: any) => {
+  const openModal = (item: FeedItem) => {
     setViewingItem(item);
     setEditText(item.content_text || item.draft_outreach || "");
     setIsRejecting(false);
@@ -139,19 +161,6 @@ export default function UnifiedDashboard() {
     setIsRejecting(false);
   };
 
-  const getFormattedText = (text: string) => {
-    if (!text) return { hook: "", body: "" };
-    const firstNewline = text.indexOf('\n');
-    const firstPeriod = text.indexOf('. ');
-    
-    let splitIndex = -1;
-    if (firstNewline > -1 && firstPeriod > -1) splitIndex = Math.min(firstNewline, firstPeriod + 1);
-    else if (firstNewline > -1) splitIndex = firstNewline;
-    else if (firstPeriod > -1) splitIndex = firstPeriod + 1;
-    
-    if (splitIndex === -1 || splitIndex > 150) return { hook: text, body: "" };
-    return { hook: text.slice(0, splitIndex).trim(), body: text.slice(splitIndex).trim() };
-  };
 
   const filteredFeed = feed.filter(item => {
     if (filter === "BLOCKED") return item.status === "blocked";
@@ -180,7 +189,7 @@ export default function UnifiedDashboard() {
             <h1 style={{ margin: '0 0 0.5rem 0', fontSize: '2rem', fontWeight: 800, color: 'var(--foreground)' }}>
               Welcome back, Judge 👋
             </h1>
-            <p style={{ margin: 0, opacity: 0.6, fontSize: '1.1rem' }}>Let's review today's marketing assets.</p>
+            <p style={{ margin: 0, opacity: 0.6, fontSize: '1.1rem' }}>Let&apos;s review today&apos;s marketing assets.</p>
           </div>
         </div>
 
@@ -276,12 +285,12 @@ export default function UnifiedDashboard() {
         </div>
 
         <div className="ui-card" style={{ padding: '1rem', background: 'white' }}>
-          {Object.entries(filteredFeed.reduce((acc: any, item) => {
+          {Object.entries(filteredFeed.reduce((acc: Record<string, FeedItem[]>, item) => {
             const topic = item.topic || "Legacy / Unknown Topic";
             if (!acc[topic]) acc[topic] = [];
             acc[topic].push(item);
             return acc;
-          }, {})).map(([topic, items]: [string, any], index) => (
+          }, {})).map(([topic, items], index) => (
             <details key={topic} style={{ borderBottom: '1px solid var(--card-border)', paddingBottom: '1rem', marginBottom: '1rem' }} open={index === 0}>
               <summary style={{ cursor: 'pointer', fontSize: '1.1rem', fontWeight: 700, padding: '1rem', background: '#f8f9fc', borderRadius: '12px', display: 'flex', justifyContent: 'space-between' }}>
                 <span>{topic}</span>
@@ -289,11 +298,11 @@ export default function UnifiedDashboard() {
               </summary>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem', padding: '0 1rem' }}>
-                {items.map((item: any, itemIndex: number) => {
+                {items.map((item, itemIndex) => {
                   const isBlocked = item.status === "blocked";
                   const isRejected = item.status === "rejected";
                   const isPending = item.status === "pending_review";
-                  const variantCount = items.filter((x: any, i: number) => i <= itemIndex && x.platform === item.platform && x.type === 'TEXT').length;
+                  const variantCount = items.filter((x, i) => i <= itemIndex && x.platform === item.platform && x.type === 'TEXT').length;
                   const displayPlatform = (item.platform && item.type === 'TEXT') ? `${item.platform} v${variantCount}` : item.platform;
                   
                   return (

@@ -1,20 +1,21 @@
-import sys
 import io
+import sys
+
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-from pathlib import Path
 
 backend_dir = r"c:\Users\sharv\Downloads\hackthon\ja-assure-marketing-agent\backend"
 sys.path.append(backend_dir)
 
-from app.core.db import SessionLocal
-from app.models.content import ContentAsset, ContentVersion, ContentStatus
 from app.agents.localization import localize_content
+from app.core.db import SessionLocal
+from app.models.content import ContentAsset, ContentStatus, ContentVersion
+
 
 def prove_multilingual_extended():
     db = SessionLocal()
     try:
         english_text = "As a small business owner, unexpected events can disrupt your cash flow. Jade's tailored insurance ensures you are covered, giving you peace of mind."
-        
+
         for lang_code, expected_script in [("th", "Thai script"), ("zh", "Chinese characters")]:
             print(f"\n{'='*60}")
             print(f"LOCALIZING TO: {lang_code.upper()}")
@@ -22,7 +23,7 @@ def prove_multilingual_extended():
             db.add(asset)
             db.commit()
             db.refresh(asset)
-            
+
             version = ContentVersion(content_asset_id=asset.id, content_text=english_text)
             db.add(version)
             db.commit()
@@ -40,7 +41,7 @@ def prove_multilingual_extended():
             elif lang_code == "zh":
                 # CJK Unified Ideographs: U+4E00–U+9FFF
                 has_correct_script = any('\u4e00' <= c <= '\u9fff' for c in loc_version.content_text)
-            
+
             if has_correct_script:
                 print(f"PASS: Output contains actual {expected_script} characters (not Latin/romanization)")
             else:

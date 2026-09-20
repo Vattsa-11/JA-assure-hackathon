@@ -3,8 +3,14 @@ import { useEffect, useState } from 'react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+// Shape of GET /review/metrics.
+interface Metrics {
+  rejection_rate: number;
+  edit_intensity: number;
+}
+
 export default function MetricsPage() {
-  const [metrics, setMetrics] = useState<any>(null);
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,8 +22,8 @@ export default function MetricsPage() {
       if (!res.ok) throw new Error(`API error: ${res.status}`);
       const data = await res.json();
       setMetrics(data);
-    } catch (e: any) {
-      setError(e.message || 'Failed to load metrics.');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load metrics.');
     } finally {
       setLoading(false);
     }
@@ -78,9 +84,9 @@ export default function MetricsPage() {
       <div className="glass-panel" style={{ marginTop: '2rem', padding: '2rem' }}>
         <h3 style={{ marginBottom: '1rem' }}>How the Feedback Loop Works</h3>
         <p style={{ opacity: 0.7, lineHeight: 1.7, margin: 0 }}>
-          Every time you <strong>reject</strong> an asset and write a feedback note, that lesson is stored in the database 
-          and automatically injected into the AI agent's context the next time it generates content for that brand. 
-          The <strong>rejection rate</strong> should trend downward over time as the agent learns your brand's standards.
+          Every time you <strong>reject</strong> an asset and write a feedback note, that lesson is stored in the database
+          and automatically injected into the AI agent&apos;s context the next time it generates content for that brand.
+          The <strong>rejection rate</strong> should trend downward over time as the agent learns your brand&apos;s standards.
           The <strong>edit intensity</strong> tracks how many revisions an asset needs — lower is better.
         </p>
       </div>

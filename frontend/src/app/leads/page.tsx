@@ -3,15 +3,33 @@ import { useEffect, useState } from 'react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+interface Lead {
+  id: number;
+  business_name: string;
+  website?: string | null;
+  email?: string | null;
+  niche: string;
+  region: string;
+  fit_score?: number | null;
+  fit_reason?: string | null;
+  draft_outreach?: string | null;
+  status: string;
+}
+
+interface Brand {
+  id: number;
+  name: string;
+}
+
 export default function LeadsPage() {
-  const [leads, setLeads] = useState<any[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [expandedLead, setExpandedLead] = useState<number | null>(null);
   const [niche, setNiche] = useState('jewellery retailers');
   const [region, setRegion] = useState('London');
   const [brandId, setBrandId] = useState('1');
-  const [brands, setBrands] = useState<any[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
 
   const fetchLeads = async () => {
     setLoading(true);

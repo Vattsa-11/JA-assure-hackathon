@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Link from 'next/link'
 import { Inter } from 'next/font/google'
 import './globals.css'
 
@@ -20,10 +21,10 @@ export default function RootLayout({
         <nav style={{ background: 'white', padding: '1rem 2rem', borderBottom: '1px solid var(--card-border)', display: 'flex', gap: '2rem', alignItems: 'center' }}>
           <div style={{ fontWeight: 800, fontSize: '1.2rem', color: 'var(--primary)' }}>JA Assure</div>
           <div style={{ display: 'flex', gap: '1.5rem' }}>
-            <a href="/" style={{ textDecoration: 'none', color: '#475569', fontWeight: 600 }}>Dashboard</a>
-            <a href="/leads" style={{ textDecoration: 'none', color: '#475569', fontWeight: 600 }}>Leads Intelligence</a>
-            <a href="/metrics" style={{ textDecoration: 'none', color: '#475569', fontWeight: 600 }}>Metrics</a>
-            <a href="/queue" style={{ textDecoration: 'none', color: '#475569', fontWeight: 600 }}>Review Queue</a>
+            <Link href="/" style={{ textDecoration: 'none', color: '#475569', fontWeight: 600 }}>Dashboard</Link>
+            <Link href="/leads" style={{ textDecoration: 'none', color: '#475569', fontWeight: 600 }}>Leads Intelligence</Link>
+            <Link href="/metrics" style={{ textDecoration: 'none', color: '#475569', fontWeight: 600 }}>Metrics</Link>
+            <Link href="/queue" style={{ textDecoration: 'none', color: '#475569', fontWeight: 600 }}>Review Queue</Link>
           </div>
         </nav>
         {children}

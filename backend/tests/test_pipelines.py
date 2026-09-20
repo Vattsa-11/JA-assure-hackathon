@@ -1,12 +1,13 @@
-import sys
-import os
 import logging
+import os
+import sys
+
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.main import app
 from app.core.db import SessionLocal
+from app.main import app
 from app.models.brand import Brand
 
 logging.basicConfig(level=logging.INFO)
@@ -18,7 +19,7 @@ def run_pipeline_tests():
     db = SessionLocal()
     brand = db.query(Brand).filter(Brand.name == 'Jade').first()
     db.close()
-    
+
     if not brand:
         logger.error("No Jade brand found. Please run seed script first.")
         return
@@ -31,7 +32,7 @@ def run_pipeline_tests():
         })
         logger.info(f"Status: {response.status_code}")
         logger.info(f"Response: {response.json()}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 -- manual script: a missing API key is an expected outcome
         logger.error(f"Pipeline failed (expected if no API key): {e}")
 
     logger.info("=== Testing Lead Pipeline Endpoint ===")
@@ -43,7 +44,7 @@ def run_pipeline_tests():
         })
         logger.info(f"Status: {response.status_code}")
         logger.info(f"Response: {response.json()}")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001 -- manual script: a missing API key is an expected outcome
         logger.error(f"Pipeline failed (expected if no API key): {e}")
 
 if __name__ == "__main__":
