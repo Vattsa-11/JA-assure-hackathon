@@ -1,0 +1,167 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+
+:root {
+  --background: #f8f9fc;
+  --foreground: #2d3436;
+  --primary: #5A52FF;
+  --primary-hover: #4a44d4;
+  --accent: #FF6575;
+  --accent-hover: #e65a6a;
+  --card-bg: #ffffff;
+  --card-border: rgba(0, 0, 0, 0.05);
+  --success: #10b981;
+  --danger: #FF6575;
+  --warning: #f59e0b;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: 'Nunito', system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.line-clamp-4 {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ui-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 20px;
+  box-shadow: 0 10px 40px rgba(90, 82, 255, 0.05), 0 2px 10px rgba(0,0,0,0.02);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ui-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 40px rgba(90, 82, 255, 0.08), 0 5px 15px rgba(0,0,0,0.04);
+}
+
+.coral-card {
+  background: linear-gradient(135deg, #FF7675 0%, #FF526B 100%);
+  border-radius: 24px;
+  color: white;
+  box-shadow: 0 15px 30px rgba(255, 101, 117, 0.3);
+}
+
+.coral-card input, .coral-card select {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  width: 100%;
+  font-family: inherit;
+  outline: none;
+}
+.coral-card input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+.coral-card select option {
+  color: black;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 50px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  font-family: inherit;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.btn-white {
+  background: white;
+  color: var(--accent);
+}
+.btn-white:hover {
+  background: #f8f9fa;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+.btn-primary:hover {
+  background: var(--primary-hover);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: white;
+}
+
+.btn-success {
+  background: var(--success);
+  color: white;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(45, 52, 54, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 24px;
+  padding: 2rem;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+}
+
+.tag {
+  padding: 0.25rem 0.75rem;
+  border-radius: 50px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tag-primary { background: rgba(90, 82, 255, 0.1); color: var(--primary); }
+.tag-success { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+.tag-danger { background: rgba(255, 101, 117, 0.1); color: var(--danger); }
+.tag-gray { background: #f1f2f6; color: #747d8c; }
+
+details {
+  border-radius: 20px;
+  overflow: hidden;
+}
+summary {
+  list-style: none;
+  outline: none;
+}
+summary::-webkit-details-marker {
+  display: none;
+}
+

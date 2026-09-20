@@ -1,0 +1,13 @@
+.env
+venv/
+node_modules/
+__pycache__/
+*.pyc
+_trash/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.next/
+media/*.mp4
+*.log
+.env.local

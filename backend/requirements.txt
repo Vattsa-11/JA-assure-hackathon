@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+sqlalchemy
+alembic
+pydantic-settings
+groq
+langgraph
+langchain-groq
+playwright
+beautifulsoup4
+requests
+edge-tts
+moviepy
+pytest
