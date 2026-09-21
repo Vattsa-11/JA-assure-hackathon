@@ -1,8 +1,10 @@
 from sqlalchemy.orm import Session
-from app.models.brand import Brand
-from app.models.content import ContentAsset, ContentVersion, ContentStatus
-from app.services.llm_client import llm_client
+
 from app.agents.lessons import get_relevant_lessons
+from app.models.brand import Brand
+from app.models.content import ContentAsset, ContentStatus, ContentVersion
+from app.services.llm_client import llm_client
+
 
 def generate_content(db: Session, brand_id: int, topic: str) -> list[ContentAsset]:
     """

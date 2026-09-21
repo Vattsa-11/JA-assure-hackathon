@@ -1,5 +1,7 @@
 from sqlalchemy import Column, String
+
 from app.models.base import BaseModel
+
 
 class CompetitorDigestEntry(BaseModel):
     __tablename__ = "competitor_digest_entries"

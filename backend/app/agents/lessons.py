@@ -1,8 +1,10 @@
-from sqlalchemy.orm import Session
-from app.models.content import Feedback, ContentAsset, ContentVersion
-from typing import List
 
-def get_relevant_lessons(db: Session, brand_id: int, limit: int = 5) -> List[str]:
+from sqlalchemy.orm import Session
+
+from app.models.content import ContentAsset, ContentVersion, Feedback
+
+
+def get_relevant_lessons(db: Session, brand_id: int, limit: int = 5) -> list[str]:
     """
     Fetches recent rejection notes/lessons for a brand to avoid repeating mistakes.
     Cross-brand contamination is prevented by filtering on brand_id.

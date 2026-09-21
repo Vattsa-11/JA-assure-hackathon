@@ -1,15 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+
 from app.core.db import get_db
-from app.models.content import ContentAsset, ContentStatus, Feedback, ContentVersion
-from app.schemas.review import RejectRequest, EditRequest
+from app.models.content import ContentAsset, ContentStatus, ContentVersion, Feedback
+from app.schemas.review import EditRequest, RejectRequest
 
 router = APIRouter(prefix="/review", tags=["Review"])
 
 @router.get("/queue")
 def get_review_queue(db: Session = Depends(get_db)):
     assets = db.query(ContentAsset).filter(ContentAsset.status == ContentStatus.pending_review).all()
-    
+
     # Return limited info for the queue
     result = []
     for asset in assets:
@@ -29,7 +30,7 @@ def approve_asset(asset_id: int, db: Session = Depends(get_db)):
     asset = db.query(ContentAsset).filter(ContentAsset.id == asset_id).first()
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
-    
+
     asset.status = ContentStatus.approved
     db.commit()
     return {"message": "Asset approved"}
@@ -39,7 +40,7 @@ def edit_asset(asset_id: int, request: EditRequest, db: Session = Depends(get_db
     asset = db.query(ContentAsset).filter(ContentAsset.id == asset_id).first()
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
-    
+
     version = ContentVersion(content_asset_id=asset.id, content_text=request.new_content_text)
     db.add(version)
     asset.status = ContentStatus.approved
@@ -51,21 +52,21 @@ def reject_asset(asset_id: int, request: RejectRequest, db: Session = Depends(ge
     asset = db.query(ContentAsset).filter(ContentAsset.id == asset_id).first()
     if not asset:
         raise HTTPException(status_code=404, detail="Asset not found")
-        
+
     feedback = Feedback(
         content_asset_id=asset.id,
         reason_tag=request.reason_tag,
         note=request.note
     )
     db.add(feedback)
-    
-    asset.status = ContentStatus.draft 
+
+    asset.status = ContentStatus.draft
     db.commit()
     return {"message": "Asset rejected and feedback recorded"}
 
 @router.get("/metrics")
 def get_metrics(db: Session = Depends(get_db)):
-    from app.agents.lessons import get_rejection_rate, get_edit_intensity
+    from app.agents.lessons import get_edit_intensity, get_rejection_rate
     return {
         "rejection_rate": get_rejection_rate(db),
         "edit_intensity": get_edit_intensity(db)
@@ -76,7 +77,7 @@ def get_leads(db: Session = Depends(get_db)):
     from app.models.lead import Lead
     from app.schemas.review import LeadSchema
     leads = db.query(Lead).order_by(Lead.created_at.desc()).all()
-    return [LeadSchema.model_validate(l) for l in leads]
+    return [LeadSchema.model_validate(lead) for lead in leads]
 
 @router.post("/leads/{lead_id}/approve")
 def approve_lead(lead_id: int, db: Session = Depends(get_db)):

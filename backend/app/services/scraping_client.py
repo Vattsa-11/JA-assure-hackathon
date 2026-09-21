@@ -1,6 +1,8 @@
 import logging
+
 from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+from playwright.sync_api import sync_playwright
 
 logger = logging.getLogger(__name__)
 
@@ -20,26 +22,26 @@ class ScrapingClient:
                 page.goto(url, timeout=15000, wait_until="domcontentloaded")
                 html = page.content()
                 browser.close()
-                
+
                 soup = BeautifulSoup(html, "html.parser")
-                
+
                 # Strip out unwanted tags
                 for element in soup(["script", "style", "nav", "footer", "header", "aside"]):
                     element.decompose()
-                
+
                 text = soup.get_text(separator="\n")
-                
+
                 # Clean up whitespace
                 lines = (line.strip() for line in text.splitlines())
                 chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
                 text = "\n".join(chunk for chunk in chunks if chunk)
-                
+
                 return text[:5000] # Cap length to avoid context window explosion
         except PlaywrightTimeoutError:
             logger.warning(f"Timeout while scraping {url}")
             return None
-        except Exception as e:
-            logger.warning(f"Failed to scrape {url}: {str(e)}")
+        except Exception as e:  # noqa: BLE001 - fail-soft over external service I/O
+            logger.warning(f"Failed to scrape {url}: {e!s}")
             return None
 
 scraping_client = ScrapingClient()

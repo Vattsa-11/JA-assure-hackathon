@@ -26,6 +26,11 @@ Working log of UI improvements and maintenance performed on this repo. Newest en
 ### Endpoint verification (all live)
 - GET: `/dashboard/stats|brands|feed`, `/review/queue|metrics|leads` → 200 (after enum fix).
 
+### 2026-09-21 (cont.) — full ruff + mypy clean pass
+- Pulled latest (no changes). ruff: 132 findings fixed (117 auto: import sort/whitespace/PEP-585/604 typing, f-string conversions; manual: 2x E741 `l` renames, W291, moved `main.py` imports to top (E402), justified `noqa: BLE001` on 12 intentional fail-soft catches over external I/O).
+- mypy: 25 errors fixed. Models converted to SQLAlchemy 2.0 `Mapped[]`/`mapped_column` style (kills all `Column[Any]`/arg-type errors at the root); `ChatGroq` kwargs modernized (`api_key` as `SecretStr`, `model=`), `Runnable` return type + explicit post-loop `raise`s in `llm_client`; `ContentState`/`LeadState` annotations on `content_graph.invoke`/`lead_graph.invoke` inputs; `hunter_client` params typed.
+- Verified: 7/7 tests, 6/6 endpoints 200, mypy + ruff fully clean.
+
 ### Not done / ideas
 - 129 remaining ruff findings are stylistic (C408, UP rules) — left as-is.
 - The two tracked `.db` files keep producing dirty diffs; consider untracking + gitignoring them.

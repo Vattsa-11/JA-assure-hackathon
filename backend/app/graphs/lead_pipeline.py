@@ -1,9 +1,11 @@
-from typing import TypedDict
-from langgraph.graph import StateGraph, START, END
-from app.core.db import SessionLocal
-from app.agents.lead import find_leads
-from app.agents.compliance import check_lead_compliance
 import logging
+from typing import TypedDict
+
+from langgraph.graph import END, START, StateGraph
+
+from app.agents.compliance import check_lead_compliance
+from app.agents.lead import find_leads
+from app.core.db import SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +21,7 @@ def find_leads_node(state: LeadState):
     db = SessionLocal()
     try:
         leads = find_leads(db, state["brand_id"], state["niche"], state["region"])
-        lead_ids = [l.id for l in leads]
+        lead_ids = [lead.id for lead in leads]
         return {"generated_lead_ids": lead_ids, "passed_lead_ids": [], "failed_lead_ids": []}
     finally:
         db.close()
@@ -37,7 +39,7 @@ def compliance_node(state: LeadState):
                 else:
                     failed.append(lead_id)
                     logger.info(f"Lead {lead_id} outreach failed compliance.")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - fail-soft over external service I/O
                 logger.error(f"Lead compliance error for lead {lead_id}: {e}")
                 failed.append(lead_id)
         return {"passed_lead_ids": passed, "failed_lead_ids": failed}

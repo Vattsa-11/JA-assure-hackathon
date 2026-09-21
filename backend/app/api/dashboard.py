@@ -1,11 +1,18 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
+
+from app.agents.lessons import get_relevant_lessons
 from app.core.db import get_db
-from app.models.content import ContentAsset, ContentStatus, ContentVersion, ComplianceReview, Feedback
+from app.models.brand import Brand
+from app.models.content import (
+    ComplianceReview,
+    ContentAsset,
+    ContentStatus,
+    ContentVersion,
+    Feedback,
+)
 from app.models.lead import Lead, LeadStatus
 from app.models.media import VideoAsset
-from app.models.brand import Brand
-from app.agents.lessons import get_relevant_lessons
 
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
@@ -14,14 +21,14 @@ def get_stats(db: Session = Depends(get_db)):
     # ContentAsset aggregates
     content_pending = db.query(ContentAsset).filter(ContentAsset.status == ContentStatus.pending_review).count()
     content_approved = db.query(ContentAsset).filter(ContentAsset.status == ContentStatus.approved).count()
-    
+
     # We consider rejected if a Feedback row exists for a given asset
     content_rejected = db.query(ContentAsset).join(Feedback).distinct().count()
 
     # Lead aggregates
     lead_pending = db.query(Lead).filter(Lead.status == LeadStatus.pending_review).count()
     lead_approved = db.query(Lead).filter(Lead.status == LeadStatus.approved).count()
-    
+
     # Video counts
     video_count = db.query(VideoAsset).count()
 
@@ -47,20 +54,20 @@ def get_feed(db: Session = Depends(get_db)):
         review = db.query(ComplianceReview).filter(ComplianceReview.content_asset_id == asset.id).order_by(ComplianceReview.created_at.desc()).first()
         is_blocked = (asset.status == ContentStatus.draft) and (review is not None and not review.passed)
         has_feedback = db.query(Feedback).filter(Feedback.content_asset_id == asset.id).first() is not None
-        
+
         # Only include if pending_review, approved, blocked, or rejected with feedback
         if asset.status == ContentStatus.draft and not is_blocked and not has_feedback:
             continue
 
         latest_version = db.query(ContentVersion).filter(ContentVersion.content_asset_id == asset.id).order_by(ContentVersion.created_at.desc()).first()
         lessons = get_relevant_lessons(db, asset.brand_id)
-        
+
         status_label = asset.status.value
         if is_blocked:
             status_label = "blocked"
         elif has_feedback and asset.status == ContentStatus.draft:
             status_label = "rejected"
-            
+
         feed.append({
             "id": asset.id,
             "type": "TEXT",
@@ -103,7 +110,7 @@ def get_feed(db: Session = Depends(get_db)):
         # Since we use moviepy, if video_file_path is populated, it's rendered.
         if video.video_file_path:
             stage = "Video Rendered"
-            
+
         c_asset = db.query(ContentAsset).filter(ContentAsset.id == video.content_asset_id).first()
         brand_name = c_asset.brand.name if (c_asset and c_asset.brand) else "Unknown"
 
@@ -120,5 +127,5 @@ def get_feed(db: Session = Depends(get_db)):
         })
 
     # Sort unified feed by created_at desc
-    feed.sort(key=lambda x: x["created_at"], reverse=True)
+    feed.sort(key=lambda x: str(x["created_at"]), reverse=True)
     return feed

@@ -1,6 +1,10 @@
 import enum
-from sqlalchemy import Column, Integer, String, Enum
+
+from sqlalchemy import Enum, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column
+
 from app.models.base import BaseModel
+
 
 class LeadStatus(str, enum.Enum):
     draft = "draft"
@@ -11,12 +15,14 @@ class LeadStatus(str, enum.Enum):
 class Lead(BaseModel):
     __tablename__ = "leads"
 
-    business_name = Column(String, nullable=False)
-    website = Column(String, nullable=True)
-    email = Column(String, nullable=True)
-    niche = Column(String, nullable=False)
-    region = Column(String, nullable=False)
-    fit_score = Column(Integer, nullable=True)
-    fit_reason = Column(String, nullable=True)
-    draft_outreach = Column(String, nullable=True)
-    status = Column(Enum(LeadStatus), default=LeadStatus.draft, nullable=False)
+    business_name: Mapped[str] = mapped_column(String, nullable=False)
+    website: Mapped[str | None] = mapped_column(String, nullable=True)
+    email: Mapped[str | None] = mapped_column(String, nullable=True)
+    niche: Mapped[str] = mapped_column(String, nullable=False)
+    region: Mapped[str] = mapped_column(String, nullable=False)
+    fit_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    fit_reason: Mapped[str | None] = mapped_column(String, nullable=True)
+    draft_outreach: Mapped[str | None] = mapped_column(String, nullable=True)
+    status: Mapped[LeadStatus] = mapped_column(
+        Enum(LeadStatus), default=LeadStatus.draft, nullable=False
+    )

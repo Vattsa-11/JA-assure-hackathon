@@ -1,11 +1,13 @@
+import logging
+
 from sqlalchemy.orm import Session
+
 from app.models.brand import Brand
 from app.models.lead import Lead, LeadStatus
-from app.services.osm_client import osm_client
-from app.services.scraping_client import scraping_client
 from app.services.hunter_client import hunter_client
 from app.services.llm_client import llm_client
-import logging
+from app.services.osm_client import osm_client
+from app.services.scraping_client import scraping_client
 
 logger = logging.getLogger(__name__)
 
@@ -20,18 +22,18 @@ def find_leads(db: Session, brand_id: int, niche: str, region: str) -> list[Lead
 
     osm_results = osm_client.find_businesses(niche, region, limit=3)
     created_leads = []
-    
+
     for b in osm_results:
         scraped_text = ""
         email = b.get("email")
-        
+
         website = b.get("website")
         if website:
             scraped_text = scraping_client.scrape_url(website) or ""
             if not email:
                 domain = website.replace("https://", "").replace("http://", "").split("/")[0]
                 email = hunter_client.find_email_for_domain(domain)
-                
+
         prompt = f"""
 Business Name: {b['name']}
 Niche: {niche}
@@ -64,7 +66,7 @@ Return JSON:
                 model_name="qwen/qwen3.8-27b",
                 temperature=0.3
             )
-            
+
             lead = Lead(
                 business_name=b["name"],
                 website=website,
@@ -79,7 +81,7 @@ Return JSON:
             db.add(lead)
             db.commit()
             created_leads.append(lead)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - fail-soft over external service I/O
             logger.warning(f"Failed to process lead {b['name']}: {e}")
-            
+
     return created_leads
