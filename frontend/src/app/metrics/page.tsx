@@ -32,51 +32,51 @@ export default function MetricsPage() {
   );
 
   if (error) return (
-    <div className="glass-panel" style={{ padding: '2rem', border: '1px solid var(--danger)' }}>
-      <h3 style={{ color: 'var(--danger)' }}>Error</h3>
-      <p>{error}</p>
-      <button className="btn btn-primary" onClick={fetchMetrics}>Retry</button>
+    <div className="page-container">
+      <div className="glass-panel" style={{ padding: '2rem', border: '1px solid rgba(255,101,117,0.4)' }}>
+        <h3 style={{ color: 'var(--danger)', marginTop: 0 }}>Error</h3>
+        <p>{error}</p>
+        <button className="btn btn-primary" onClick={fetchMetrics}>Retry</button>
+      </div>
     </div>
   );
 
   return (
-    <div style={{ padding: '2.5rem 3rem', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+    <div className="page-container">
+      <div className="page-header">
         <div>
           <h1>Performance Metrics</h1>
-          <p style={{ opacity: 0.7, margin: 0 }}>Live insights into agent learning and compliance rates.</p>
+          <p className="page-subtitle">Live insights into agent learning and compliance rates.</p>
         </div>
         <button className="btn btn-primary" onClick={fetchMetrics}>↻ Refresh</button>
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
-        <div className="ui-card" style={{ padding: '2.5rem', textAlign: 'center', background: 'var(--pastel-yellow)', border: 'none' }}>
-          <div style={{ fontSize: '0.875rem', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1rem', color: 'var(--foreground)', fontWeight: 600 }}>
-            Rejection Rate
-          </div>
-          <div style={{ fontSize: '3.5rem', fontWeight: 'bold', color: 'var(--foreground)', lineHeight: 1 }}>
+      <div className="grid">
+        <div className="glass-panel kpi-card">
+          <div className="kpi-accent-bar kpi-accent-purple" />
+          <div className="kpi-label">Rejection Rate</div>
+          <div className="kpi-value kpi-value-purple">
             {metrics?.rejection_rate?.toFixed(1)}%
           </div>
-          <p style={{ fontSize: '0.875rem', opacity: 0.7, marginTop: '1rem', marginBottom: 0, color: 'var(--foreground)' }}>
+          <p className="kpi-hint">
             Assets that required human correction
           </p>
         </div>
 
-        <div className="ui-card" style={{ padding: '2.5rem', textAlign: 'center', background: 'var(--pastel-green)', border: 'none' }}>
-          <div style={{ fontSize: '0.875rem', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1rem', color: 'var(--foreground)', fontWeight: 600 }}>
-            Edit Intensity
-          </div>
-          <div style={{ fontSize: '3.5rem', fontWeight: 'bold', color: 'var(--foreground)', lineHeight: 1 }}>
+        <div className="glass-panel kpi-card">
+          <div className="kpi-accent-bar kpi-accent-green" />
+          <div className="kpi-label">Edit Intensity</div>
+          <div className="kpi-value kpi-value-green">
             {metrics?.edit_intensity?.toFixed(2)}
           </div>
-          <p style={{ fontSize: '0.875rem', opacity: 0.7, marginTop: '1rem', marginBottom: 0, color: 'var(--foreground)' }}>
+          <p className="kpi-hint">
             Avg content versions per asset (&gt;1.0 = edits required)
           </p>
         </div>
       </div>
 
-      <div className="ui-card" style={{ marginTop: '2.5rem', padding: '2.5rem', background: 'white' }}>
-        <h3 style={{ marginBottom: '1rem', fontSize: '1.25rem' }}>How the Feedback Loop Works</h3>
+      <div className="glass-panel" style={{ marginTop: '2rem', padding: '2rem' }}>
+        <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>How the Feedback Loop Works</h3>
         <p style={{ opacity: 0.7, lineHeight: 1.7, margin: 0 }}>
           Every time you <strong>reject</strong> an asset and write a feedback note, that lesson is stored in the database 
           and automatically injected into the AI agent&apos;s context the next time it generates content for that brand. 

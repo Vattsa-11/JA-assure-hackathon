@@ -157,10 +157,9 @@ export default function UnifiedDashboard() {
   });
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--background)' }}>
-
+    <div className="page-container">
       {/* Main Content Area */}
-      <div style={{ padding: '2.5rem 3rem', maxWidth: '1200px', margin: '0 auto' }}>
+      <div>
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
           <div>

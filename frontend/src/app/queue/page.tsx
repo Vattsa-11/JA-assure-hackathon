@@ -10,6 +10,8 @@ const CHAR_LIMITS: Record<string, number> = {
   instagram: 2200
 };
 
+const platformTagClass = (platform: string) =>
+  `tag tag-platform-${(platform || '').toLowerCase().replace(/^x$/, 'x').replace(/\s+/g, '-')}`;
 export default function QueuePage() {
   const [assets, setAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,19 +132,21 @@ export default function QueuePage() {
   );
 
   if (error) return (
-    <div className="ui-card" style={{ padding: '2rem', border: '1px solid var(--danger)', margin: '2rem' }}>
-      <h3 style={{ color: 'var(--danger)' }}>Error</h3>
-      <p>{error}</p>
-      <button className="btn" style={{ background: 'var(--foreground)', color: 'white' }} onClick={fetchQueue}>Retry</button>
+    <div className="page-container">
+      <div className="glass-panel" style={{ padding: '2rem', border: '1px solid rgba(255,101,117,0.4)' }}>
+        <h3 style={{ color: 'var(--danger)', marginTop: 0 }}>Error</h3>
+        <p>{error}</p>
+        <button className="btn btn-primary" onClick={fetchQueue}>Retry</button>
+      </div>
     </div>
   );
 
   return (
-    <div style={{ padding: '2.5rem 3rem', maxWidth: '1200px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
+    <div className="page-container">
+      <div className="page-header">
         <div>
-          <h1 style={{ margin: '0 0 0.25rem 0', fontWeight: 800 }}>Approval Queue</h1>
-          <p style={{ opacity: 0.6, margin: 0 }}>
+          <h1>Approval Queue</h1>
+          <p className="page-subtitle">
             {assets.length} item{assets.length === 1 ? '' : 's'} awaiting review.
           </p>
         </div>
@@ -162,35 +166,29 @@ export default function QueuePage() {
           {assets.map((asset: Record<string,unknown>) => {
             const { hook, body } = getFormattedText(asset.content_text as string);
             return (
-              <div key={asset.id as number} className="ui-card" style={{ display: 'flex', flexDirection: 'column', padding: '1.5rem', height: '100%', minHeight: '300px' }}>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <span className="tag" style={{ background: 'var(--pastel-yellow)', color: 'var(--foreground)' }}>
-                        {asset.platform as string}
+              <div key={asset.id} className="glass-panel queue-card">
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '1.5rem 1.5rem 0.75rem' }}>
+                  <div className="queue-card-top">
+                    <div className="queue-card-tags">
+                      <span className={platformTagClass(asset.platform)}>
+                        {asset.platform}
                       </span>
                       {asset.brand_name && (
-                        <span className="tag" style={{ background: 'var(--pastel-blue)', color: 'var(--foreground)' }}>
-                          {asset.brand_name as string}
-                        </span>
+                        <span className="tag tag-gray">{asset.brand_name}</span>
                       )}
                     </div>
-                    <span className="tag" style={{ background: 'var(--pastel-green)', color: 'var(--foreground)' }}>{(asset.language as string)?.toUpperCase()}</span>
+                    <span className="tag tag-language">{(asset.language || '').toUpperCase()}</span>
                   </div>
-                  <div className="line-clamp-4" style={{ flex: 1 }}>
-                    <span style={{ fontWeight: 600, fontSize: '1rem', display: 'block', marginBottom: body ? '0.5rem' : '0' }}>
-                      {hook}
-                    </span>
-                    {body && (
-                      <span style={{ fontSize: '0.9rem', opacity: 0.6, whiteSpace: 'pre-wrap' }}>
-                        {body}
-                      </span>
-                    )}
+                  <div className="queue-card-body">
+                    <span className="queue-card-hook">{hook}</span>
+                    {body && <span className="queue-card-body-text">{body}</span>}
                   </div>
                 </div>
-                <button className="btn" style={{ background: 'white', color: 'var(--foreground)', border: '1px solid var(--border)', width: '100%', marginTop: 'auto', fontWeight: 600 }} onClick={() => openModal(asset)}>
-                  View / Edit
-                </button>
+                <div style={{ padding: '0 1.5rem 1.5rem' }}>
+                  <button className="btn queue-card-btn" onClick={() => openModal(asset)}>
+                    View / Edit
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -200,41 +198,48 @@ export default function QueuePage() {
       {/* View/Edit Modal */}
       {viewingAsset && (
         <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
-          <div className="modal-content">
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', alignItems: 'center' }}>
-              <h2 style={{ margin: 0 }}>Review Content</h2>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <span className="tag" style={{ background: 'var(--foreground)', color: 'white' }}>{viewingAsset.platform as string}</span>
-                {viewingAsset.brand_name && <span className="tag" style={{ background: 'var(--pastel-blue)', color: 'var(--foreground)' }}>{viewingAsset.brand_name as string}</span>}
+          <div className="modal-content" style={{ maxWidth: '640px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: '1.35rem' }}>Review Content</h2>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <span className={platformTagClass(viewingAsset.platform)}>{viewingAsset.platform}</span>
+                {viewingAsset.brand_name && <span className="tag tag-gray">{viewingAsset.brand_name}</span>}
+                <span className="tag tag-language">{(viewingAsset.language || '').toUpperCase()}</span>
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  aria-label="Close"
+                  className="tag tag-gray"
+                  style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '0.25rem 0.65rem', fontSize: '0.8rem' }}
+                >
+                  ✕
+                </button>
               </div>
             </div>
             
             {!isRejecting ? (
               <>
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <label style={{ fontWeight: 600 }}>Content Text</label>
-                    <span style={{ 
-                      fontSize: '0.8rem', 
-                      color: editText.length > (CHAR_LIMITS[(viewingAsset.platform as string)?.toLowerCase()] || 2000) ? 'var(--danger)' : 'rgba(0,0,0,0.4)'
-                    }}>
-                      {editText.length} / {CHAR_LIMITS[(viewingAsset.platform as string)?.toLowerCase()] || 2000} chars
+                <div>
+                  <div className="modal-label">
+                    <label htmlFor="review-textarea">Content Text</label>
+                    <span className={`char-count${editText.length > (CHAR_LIMITS[(viewingAsset.platform || '').toLowerCase()] || 2000) ? ' char-count-over' : ''}`}>
+                      {editText.length} / {CHAR_LIMITS[(viewingAsset.platform || '').toLowerCase()] || 2000} chars
                     </span>
                   </div>
                   <textarea
+                    id="review-textarea"
                     rows={10}
                     value={editText}
                     onChange={e => setEditText(e.target.value)}
-                    style={{ resize: 'vertical', width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)', fontFamily: 'inherit', outline: 'none' }}
                   />
                 </div>
                 
-                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'space-between' }}>
-                  <button type="button" className="btn" style={{ background: '#ef4444', color: 'white' }} onClick={() => setIsRejecting(true)}>
+                <div className="modal-actions">
+                  <button type="button" className="btn btn-danger" onClick={() => setIsRejecting(true)}>
                     ✗ Reject
                   </button>
-                  <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button type="button" className="btn" style={{ background: 'white', color: 'var(--foreground)', border: '1px solid var(--border)' }} onClick={closeModal}>
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button type="button" className="btn btn-ghost" onClick={closeModal}>
                       Cancel
                     </button>
                     {editText !== viewingAsset.content_text ? (
@@ -251,9 +256,12 @@ export default function QueuePage() {
               </>
             ) : (
               <form onSubmit={handleReject}>
-                <h3 style={{ marginBottom: '1rem', color: 'var(--danger)' }}>Reject & Teach Agent</h3>
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Reason Tag</label>
+                <h3 style={{ marginTop: 0, marginBottom: '0.5rem', color: 'var(--danger)' }}>Reject & Teach Agent</h3>
+                <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                  Your note is saved as a lesson — the agent reads it before generating content for this brand again.
+                </p>
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 700, fontSize: '0.92rem' }}>Reason Tag</label>
                   <select value={rejectTag} onChange={e => setRejectTag(e.target.value)}>
                     <option value="tone">Tone / Voice mismatch</option>
                     <option value="compliance">Compliance issue</option>
@@ -263,8 +271,8 @@ export default function QueuePage() {
                     <option value="other">Other</option>
                   </select>
                 </div>
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 700, fontSize: '0.92rem' }}>
                     Feedback Note <span style={{ opacity: 0.6, fontWeight: 400 }}>(teaches the agent)</span>
                   </label>
                   <textarea
@@ -275,9 +283,9 @@ export default function QueuePage() {
                     placeholder="Be specific: e.g. 'Jade is a luxury brand — never use casual language or exclamation points.'"
                   />
                 </div>
-                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                  <button type="button" className="btn" style={{ background: 'white', color: 'var(--foreground)', border: '1px solid var(--border)' }} onClick={() => setIsRejecting(false)}>
-                    Back to Edit
+                <div className="modal-actions">
+                  <button type="button" className="btn btn-ghost" onClick={() => setIsRejecting(false)}>
+                    ← Back to Edit
                   </button>
                   <button type="submit" className="btn btn-danger">Confirm Rejection</button>
                 </div>
