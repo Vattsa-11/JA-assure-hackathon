@@ -3,9 +3,12 @@ from langgraph.graph import StateGraph, START, END
 from app.core.db import SessionLocal
 from app.agents.content import generate_content
 from app.agents.compliance import check_compliance
+from app.agents.localization import localize_content, resolve_target_languages
+from app.models.content import ContentAsset
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 class ContentState(TypedDict):
     brand_id: int
@@ -13,6 +16,11 @@ class ContentState(TypedDict):
     generated_asset_ids: List[int]
     passed_asset_ids: List[int]
     failed_asset_ids: List[int]
+    localize: bool
+    target_languages: List[str]
+    localized_asset_ids: List[int]
+    localized_failed_ids: List[int]
+
 
 def generate_node(state: ContentState) -> dict:
     db = SessionLocal()
@@ -22,6 +30,7 @@ def generate_node(state: ContentState) -> dict:
         return {"generated_asset_ids": asset_ids, "passed_asset_ids": [], "failed_asset_ids": []}
     finally:
         db.close()
+
 
 def compliance_node(state: ContentState) -> dict:
     db = SessionLocal()
@@ -43,21 +52,55 @@ def compliance_node(state: ContentState) -> dict:
     finally:
         db.close()
 
+
+def localize_node(state: ContentState) -> dict:
+    """Localize passed assets into the requested languages. Fail-soft: an error on one
+    asset/language never aborts the whole pipeline run."""
+    localized: List[int] = []
+    failed: List[int] = []
+    if not state.get("localize"):
+        return {"localized_asset_ids": [], "localized_failed_ids": []}
+
+    targets = resolve_target_languages(state.get("target_languages"))
+    db = SessionLocal()
+    try:
+        for asset_id in state.get("passed_asset_ids", []):
+            # Missing assets are skipped silently — they were likely deleted mid-run.
+            if db.query(ContentAsset).filter(ContentAsset.id == asset_id).first() is None:
+                logger.warning(f"Localization skipped: asset {asset_id} not found")
+                continue
+            for lang in targets:
+                try:
+                    asset = localize_content(db, asset_id, lang)
+                    localized.append(asset.id)
+                except Exception as e:
+                    logger.error(f"Localization failed for asset {asset_id} -> {lang}: {e}")
+                    failed.append(asset_id)
+        return {"localized_asset_ids": localized, "localized_failed_ids": failed}
+    finally:
+        db.close()
+
+
 def compliance_router(state: ContentState) -> str:
-    """Route to 'done' regardless — failed assets are kept as draft in DB, passed ones are in queue."""
+    """Route to 'localize' when localization is requested, otherwise straight to END.
+    Failed assets are kept as draft in DB, passed ones are in queue."""
     passed = state.get("passed_asset_ids", [])
     failed = state.get("failed_asset_ids", [])
     logger.info(f"Compliance results: {len(passed)} passed, {len(failed)} failed")
+    if state.get("localize") and passed:
+        return "localize"
     return "done"
+
 
 # Build Graph
 builder = StateGraph(ContentState)
 builder.add_node("generate", generate_node)
 builder.add_node("compliance", compliance_node)
+builder.add_node("localize", localize_node)
 
 builder.add_edge(START, "generate")
 builder.add_edge("generate", "compliance")
-# Conditional edge: always routes to END but logs pass/fail split
-builder.add_conditional_edges("compliance", compliance_router, {"done": END})
+builder.add_conditional_edges("compliance", compliance_router, {"localize": "localize", "done": END})
+builder.add_edge("localize", END)
 
 content_graph = builder.compile()

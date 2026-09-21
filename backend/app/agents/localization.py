@@ -13,6 +13,13 @@ SUPPORTED_LANGUAGES = {
     "zh": "Simplified Chinese (Mandarin)"
 }
 
+def resolve_target_languages(target_languages):
+    """Normalize requested localization targets: None/[] means every supported language.
+    Unknown language codes are dropped; if nothing valid remains, nothing is localized."""
+    if not target_languages:
+        return list(SUPPORTED_LANGUAGES.keys())
+    return [lang for lang in target_languages if lang in SUPPORTED_LANGUAGES]
+
 def localize_content(db: Session, asset_id: int, target_language: str) -> ContentAsset:
     """
     Localizes a piece of content with cultural adaptation (not word-for-word translation).

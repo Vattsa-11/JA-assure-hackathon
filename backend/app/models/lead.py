@@ -6,6 +6,7 @@ class LeadStatus(str, enum.Enum):
     draft = "draft"
     pending_review = "pending_review"
     approved = "approved"
+    rejected = "rejected"
 
 class Lead(BaseModel):
     __tablename__ = "leads"

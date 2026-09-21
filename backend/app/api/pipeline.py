@@ -1,4 +1,4 @@
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks
 from app.schemas.pipeline import ContentRunRequest, LeadRunRequest, VideoRunRequest, ResearchRunRequest
 from app.graphs.content_pipeline import content_graph
 from app.graphs.lead_pipeline import lead_graph
@@ -7,18 +7,23 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/pipeline", tags=["Pipeline"])
 
-def _run_content(brand_id: int, topic: str):
+def _run_content(brand_id: int, topic: str, localize: bool = False, target_languages: list[str] | None = None):
     initial_state = {
         "brand_id": brand_id,
         "topic": topic,
         "generated_asset_ids": [],
         "passed_asset_ids": [],
-        "failed_asset_ids": []
+        "failed_asset_ids": [],
+        "localize": localize,
+        "target_languages": target_languages or [],
+        "localized_asset_ids": [],
+        "localized_failed_ids": []
     }
     result = content_graph.invoke(initial_state)
     logger.info(
         f"Content pipeline done. Passed: {result.get('passed_asset_ids')}, "
-        f"Failed: {result.get('failed_asset_ids')}"
+        f"Failed: {result.get('failed_asset_ids')}, "
+        f"Localized: {result.get('localized_asset_ids')}"
     )
 
 def _run_leads(brand_id: int, niche: str, region: str):
@@ -37,7 +42,9 @@ def run_content_pipeline(request: ContentRunRequest, background_tasks: Backgroun
     Triggers the content generation + compliance pipeline as a background task.
     Returns immediately so the browser doesn't time out.
     """
-    background_tasks.add_task(_run_content, request.brand_id, request.topic)
+    background_tasks.add_task(
+        _run_content, request.brand_id, request.topic, request.localize, request.target_languages
+    )
     return {"message": "Content pipeline started in background. Check /review/queue for results shortly."}
 
 @router.post("/leads/run")

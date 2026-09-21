@@ -163,7 +163,7 @@ export default function QueuePage() {
         </div>
       ) : (
         <div className="grid">
-          {assets.map((asset: Record<string,unknown>) => {
+          {assets.map((asset: any) => {
             const { hook, body } = getFormattedText(asset.content_text as string);
             return (
               <div key={asset.id} className="glass-panel queue-card">

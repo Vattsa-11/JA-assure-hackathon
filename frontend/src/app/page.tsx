@@ -13,7 +13,7 @@ const PLATFORM_LIMITS: Record<string, number> = {
 export default function UnifiedDashboard() {
   const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
   const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0, videos: 0 });
-  const [feed, setFeed] = useState<Record<string, unknown>[]>([]);
+  const [feed, setFeed] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
   const [generateVideo, setGenerateVideo] = useState(false);
@@ -24,7 +24,7 @@ export default function UnifiedDashboard() {
   const [topic, setTopic] = useState("");
 
   // Modal State
-  const [viewingItem, setViewingItem] = useState<Record<string, unknown> | null>(null);
+  const [viewingItem, setViewingItem] = useState<any | null>(null);
   const [editText, setEditText] = useState("");
   const [isRejecting, setIsRejecting] = useState(false);
   const [rejectTag, setRejectTag] = useState("tone");
@@ -151,7 +151,7 @@ export default function UnifiedDashboard() {
     return { hook: text.slice(0, splitIndex).trim(), body: text.slice(splitIndex).trim() };
   };
 
-  const filteredFeed = feed.filter((item: Record<string, unknown>) => {
+  const filteredFeed = feed.filter((item: any) => {
     if (filter === "BLOCKED") return item.status === "blocked";
     return true;
   });
@@ -255,12 +255,12 @@ export default function UnifiedDashboard() {
         </div>
 
         <div className="ui-card" style={{ padding: '1rem', background: 'white' }}>
-          {Object.entries(filteredFeed.reduce((acc: Record<string, unknown[]>, item: Record<string, unknown>) => {
+          {Object.entries(filteredFeed.reduce((acc: Record<string, unknown[]>, item: any) => {
             const t = (item.topic as string) || "Legacy / Unknown Topic";
             if (!acc[t]) acc[t] = [];
             acc[t].push(item);
             return acc;
-          }, {})).map(([t, items]: [string, unknown[]], index) => (
+          }, {})).map(([t, items]: [string, any[]], index) => (
             <details key={t} style={{ borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '1rem' }} open={index === 0}>
               <summary style={{ cursor: 'pointer', fontSize: '1.1rem', fontWeight: 700, padding: '1rem', background: 'var(--background)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between' }}>
                 <span>{t}</span>
@@ -268,11 +268,11 @@ export default function UnifiedDashboard() {
               </summary>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem', padding: '0 1rem' }}>
-                {(items as Record<string, unknown>[]).map((item, itemIndex: number) => {
+                {(items as any[]).map((item, itemIndex: number) => {
                   const isBlocked = item.status === "blocked";
                   const isRejected = item.status === "rejected";
                   const isPending = item.status === "pending_review";
-                  const variantCount = (items as Record<string, unknown>[]).filter((x, i) => i <= itemIndex && x.platform === item.platform && x.type === 'TEXT').length;
+                  const variantCount = (items as any[]).filter((x: any, i: number) => i <= itemIndex && x.platform === item.platform && x.type === 'TEXT').length;
                   const displayPlatform = (item.platform && item.type === 'TEXT') ? `${item.platform} v${variantCount}` : item.platform;
                   
                   return (

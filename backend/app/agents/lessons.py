@@ -1,5 +1,4 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 from app.models.content import Feedback, ContentAsset, ContentVersion
 from typing import List
 
