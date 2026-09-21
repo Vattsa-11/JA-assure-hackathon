@@ -19,7 +19,7 @@ except ImportError:
         logger.warning("MoviePy not available. Video assembly will be skipped.")
 
 # Resolve the media directory relative to the project root (two levels up from backend/app/services/)
-PROJECT_ROOT = Path(__file__).resolve().parents[4]
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 MEDIA_DIR = PROJECT_ROOT / "media"
 MEDIA_DIR.mkdir(exist_ok=True)
 
@@ -39,28 +39,30 @@ class TTSVideoClient:
 
     def assemble_video(self, script_text: str, audio_path: str, output_video_path: str, bg_color: str = "#202020") -> bool:
         """
-        Assembles an MP4 using MoviePy: brand background + timed text chunks + TTS audio.
+        Assembles an MP4 using MoviePy: loads premium animated background + sliding text chunks + TTS audio.
         Compatible with MoviePy v1 and v2.
         """
         if MOVIEPY_V2 is None:
             logger.error("MoviePy not installed. Cannot assemble video.")
             return False
 
-        def hex_to_rgb(hex_str):
-            h = hex_str.lstrip('#')
-            if len(h) == 6:
-                return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
-            return (32, 32, 32)
-
         try:
             audio_clip = AudioFileClip(audio_path)
             duration = audio_clip.duration
-            bg_rgb = hex_to_rgb(bg_color)
+            bg_path = str(MEDIA_DIR / "bg.jpg")
             
             if MOVIEPY_V2:
-                bg_clip = ColorClip(size=(1080, 1920), color=bg_rgb).with_duration(duration)
+                from moviepy.video.VideoClip import ImageClip
+                if os.path.exists(bg_path):
+                    bg_clip = ImageClip(bg_path).with_duration(duration)
+                else:
+                    bg_clip = ColorClip(size=(1080, 1920), color=(32, 32, 32)).with_duration(duration)
             else:
-                bg_clip = ColorClip(size=(1080, 1920), color=bg_rgb).set_duration(duration)
+                from moviepy.editor import ImageClip
+                if os.path.exists(bg_path):
+                    bg_clip = ImageClip(bg_path).set_duration(duration)
+                else:
+                    bg_clip = ColorClip(size=(1080, 1920), color=(32, 32, 32)).set_duration(duration)
 
             words = script_text.split()
             if not words:
@@ -81,16 +83,22 @@ class TTSVideoClient:
                     chunk_duration = duration - current_time
 
                 try:
+                    # Dynamic slide-up animation: Starts slightly lower, slides to center
+                    def pos_func(t):
+                        # Slides from y=1200 up to y=900 (center-ish) over the first 0.5s
+                        y_pos = max(900, int(1200 - (600 * t)))
+                        return ("center", y_pos)
+
                     if MOVIEPY_V2:
                         txt_clip = (
                             TextClip(
                                 text=chunk,
-                                font_size=70,
+                                font_size=80,
                                 color="white",
-                                size=(980, None),
+                                size=(900, None),
                                 method="caption"
                             )
-                            .with_position(("center", 1250))
+                            .with_position(pos_func)
                             .with_start(current_time)
                             .with_duration(chunk_duration)
                         )
@@ -98,12 +106,12 @@ class TTSVideoClient:
                         txt_clip = (
                             TextClip(
                                 chunk,
-                                fontsize=70,
+                                fontsize=80,
                                 color="white",
-                                size=(980, None),
+                                size=(900, None),
                                 method="caption"
                             )
-                            .set_position(("center", 1250))
+                            .set_position(pos_func)
                             .set_start(current_time)
                             .set_duration(chunk_duration)
                         )
