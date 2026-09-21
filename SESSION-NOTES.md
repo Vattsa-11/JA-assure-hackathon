@@ -4,6 +4,32 @@ Working log of UI improvements and maintenance performed on this repo. Newest en
 
 ---
 
+## 2026-09-21 (later) — Rebase onto rebuilt main, endpoint fixes, dead-code sweep
+
+### Git / repo state
+- Local UI-overhaul commit (`f187926`) had diverged from a **rebuilt remote main** (phase 0–7 rework). Rebased onto `origin/main` with 18 conflicts across 5 frontend files resolved (remote's newer code as base, UI overhaul layered on top). Safety branch: `backup/ui-overhaul-f187926`.
+- `ja_assure.db` runtime change re-applied (working version kept after binary stash conflict).
+
+### Fixed
+- **`LeadStatus` enum was missing `rejected`** — one rejected lead row in the db crashed `/dashboard/feed` and `/review/leads` with 500 (SQLAlchemy `KeyError: 'rejected'`); also `reject_lead` would have `AttributeError`d. Added the member → all endpoints 200.
+- **Frontend type errors after merge** — remote's `Record<string, unknown>` feed/asset annotations collided with merged JSX; relaxed to `any[]`/`any` (consistent with codebase). `tsc --noEmit` clean.
+
+### Restored localization wiring lost in the rebuild
+- `localize_node` + `ContentState.localize/target_languages/localized_asset_ids/localized_failed_ids` added to `content_pipeline.py` graph (fail-soft; missing assets skipped silently).
+- `resolve_target_languages()` restored in `app/agents/localization.py` (None/[] = all supported; unknown codes dropped).
+- `/pipeline/content/run` accepts optional `localize: bool` + `target_languages: list[str]` (default: all).
+- Backend tests: **7 passed**.
+
+### Dead-code sweep
+- ruff F-rules: 3 unused imports removed (`llm_client.py`, others). Frontend ESLint clean; `next build` passes all 5 routes.
+
+### Endpoint verification (all live)
+- GET: `/dashboard/stats|brands|feed`, `/review/queue|metrics|leads` → 200 (after enum fix).
+
+### Not done / ideas
+- 129 remaining ruff findings are stylistic (C408, UP rules) — left as-is.
+- The two tracked `.db` files keep producing dirty diffs; consider untracking + gitignoring them.
+
 ## 2026-09-21 — UI polish pass + maintenance
 
 ### Environment
