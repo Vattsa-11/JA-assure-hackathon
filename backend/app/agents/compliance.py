@@ -36,24 +36,24 @@ RUBRIC (10 rules):
 10. CLEAR CALL-TO-ACTION: If a CTA is present, it must be clear and not deceptive (no hidden costs implied, no bait-and-switch language).
 
 Return JSON ONLY in this exact format:
-{
+{{
     "passed": true,
     "flagged_phrases": [],
     "reasons": []
-}
+}}
 
 Or if failed:
-{
+{{
     "passed": false,
     "flagged_phrases": ["exact phrase from content that violates a rule"],
     "reasons": ["which rule number and why it was violated"]
-}
+}}
 """
 
     result = llm_client.generate_json(
         prompt=f"Content to review:\n\n{latest_version.content_text}",
         system_prompt=system_prompt,
-        model_name="llama3-8b-8192",
+        model_name="qwen/qwen3.8-27b",
         temperature=0.0
     )
 
@@ -72,3 +72,52 @@ Or if failed:
     db.commit()
     db.refresh(review)
     return review
+
+def check_lead_compliance(db: Session, lead_id: int) -> bool:
+    """
+    Checks a drafted lead outreach email against the 10-rule compliance rubric.
+    Passed leads move to pending_review. Failed leads stay as draft.
+    """
+    from app.models.lead import Lead, LeadStatus
+    lead = db.query(Lead).filter(Lead.id == lead_id).first()
+    if not lead or not lead.draft_outreach:
+        return False
+
+    system_prompt = """You are a strict legal and compliance reviewer for insurance marketing material in Southeast Asia.
+Evaluate the content against ALL of the following 10 rules. If ANY rule is broken, return passed=false.
+
+RUBRIC (10 rules):
+1. NO ABSOLUTE GUARANTEES: Cannot use phrases like "guarantees 100% payout", "guaranteed approval", "always pays out", or "certain payout".
+2. NO FALSE URGENCY: Cannot use manipulative urgency like "Buy now before it's too late!", "Limited time only — don't miss out!", or "Act now or lose your chance!".
+3. NO MISLEADING SCOPE: Must not imply the policy covers everything without exceptions (e.g., "covers all losses", "total protection from everything").
+4. PROFESSIONAL TONE: No defamatory, mocking, or disparaging language about competitors by name or implication.
+5. NO INCOME PROMISES: Cannot promise specific monetary returns, specific payout amounts, or investment-like gains (e.g., "earn 10% returns", "guaranteed income").
+6. LICENSED ADVICE DISCLAIMER: Must not present insurance advice as a substitute for professional consultation without any appropriate context.
+7. NO FEAR MONGERING: Cannot use excessively alarming language to manipulate decisions (e.g., "you WILL lose everything if you don't act now").
+8. CULTURALLY APPROPRIATE: Content must not contain language or imagery inappropriate for a professional Southeast Asian business audience.
+9. FACTUAL ACCURACY: Must not contain claims that are demonstrably false about insurance products in general (e.g., "all insurance pays within 24 hours").
+10. CLEAR CALL-TO-ACTION: If a CTA is present, it must be clear and not deceptive (no hidden costs implied, no bait-and-switch language).
+
+Return JSON ONLY in this exact format:
+{{
+    "passed": true,
+    "flagged_phrases": [],
+    "reasons": []
+}}
+"""
+
+    result = llm_client.generate_json(
+        prompt=f"Outreach email to review:\n\n{lead.draft_outreach}",
+        system_prompt=system_prompt,
+        model_name="qwen/qwen3.8-27b",
+        temperature=0.0
+    )
+
+    passed = result.get("passed", False)
+    if passed:
+        lead.status = LeadStatus.pending_review
+        db.commit()
+        db.refresh(lead)
+    
+    return passed
+

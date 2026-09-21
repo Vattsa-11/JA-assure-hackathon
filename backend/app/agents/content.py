@@ -44,7 +44,7 @@ Return a valid JSON object with this exact structure:
     result_json = llm_client.generate_json(
         prompt=f"Topic: {topic}",
         system_prompt=system_prompt,
-        model_name="llama3-70b-8192",
+        model_name="qwen/qwen3.8-27b",
         temperature=0.7
     )
 
@@ -64,6 +64,7 @@ Return a valid JSON object with this exact structure:
             brand_id=brand_id,
             platform=platform,
             language="en",
+            topic=topic,
             status=ContentStatus.draft
         )
         db.add(asset)

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, BackgroundTasks, HTTPException
-from app.schemas.pipeline import ContentRunRequest, LeadRunRequest, VideoRunRequest
+from app.schemas.pipeline import ContentRunRequest, LeadRunRequest, VideoRunRequest, ResearchRunRequest
 from app.graphs.content_pipeline import content_graph
 from app.graphs.lead_pipeline import lead_graph
 import logging
@@ -66,3 +66,21 @@ def run_video_pipeline(request: VideoRunRequest, background_tasks: BackgroundTas
 
     background_tasks.add_task(_run_video, request.brand_id, request.topic)
     return {"message": "Video pipeline started in background."}
+
+@router.post('/research/run')
+def run_research_pipeline(request: ResearchRunRequest, background_tasks: BackgroundTasks):
+    def _run_research(urls: list[str]):
+        from app.core.db import SessionLocal
+        from app.agents.research import run_competitor_digest
+        db = SessionLocal()
+        try:
+            results = run_competitor_digest(db, urls)
+            logger.info(f'Research pipeline done. Digested {len(results)} updates.')
+        except Exception as e:
+            logger.error(f'Research pipeline error: {e}')
+        finally:
+            db.close()
+
+    background_tasks.add_task(_run_research, request.urls)
+    return {'message': 'Research pipeline started in background.'}
+

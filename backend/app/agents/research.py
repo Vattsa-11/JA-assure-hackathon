@@ -26,7 +26,7 @@ Keep it under 3 sentences."""
         suggested_action = llm_client.generate_text(
             prompt=prompt,
             system_prompt=system_prompt,
-            model_name="llama3-8b-8192",
+            model_name="qwen/qwen3.8-27b",
             temperature=0.2
         )
         

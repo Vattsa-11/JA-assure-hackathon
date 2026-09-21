@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import './globals.css'
 import Link from 'next/link'
+import './globals.css'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -17,16 +17,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
-        <nav className="navbar glass-panel" style={{ borderRadius: 0, borderTop: 'none', borderLeft: 'none', borderRight: 'none' }}>
-          <h2 style={{ margin: 0, marginRight: '2rem' }}>JA Assure AI</h2>
-          <Link href="/queue">Approval Queue</Link>
-          <Link href="/metrics">Metrics</Link>
-          <Link href="/leads">Leads</Link>
+      <body className={inter.className} style={{ margin: 0, background: 'var(--background)' }}>
+        <nav style={{ background: 'var(--sidebar-bg)', padding: '1rem 2rem', display: 'flex', gap: '2rem', alignItems: 'center' }}>
+          <div style={{ fontWeight: 800, fontSize: '1.2rem', color: 'white' }}>JA Assure</div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <Link href="/" className="nav-link">Dashboard</Link>
+            <Link href="/leads" className="nav-link">Leads Intelligence</Link>
+            <Link href="/metrics" className="nav-link">Metrics</Link>
+            <Link href="/queue" className="nav-link">Review Queue</Link>
+          </div>
         </nav>
-        <main className="container">
-          {children}
-        </main>
+        {children}
       </body>
     </html>
   )

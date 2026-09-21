@@ -17,6 +17,7 @@ def get_review_queue(db: Session = Depends(get_db)):
         result.append({
             "id": asset.id,
             "brand_id": asset.brand_id,
+            "brand_name": asset.brand.name if asset.brand else "Unknown",
             "platform": asset.platform,
             "language": asset.language,
             "content_text": latest_version.content_text if latest_version else ""
@@ -74,5 +75,25 @@ def get_metrics(db: Session = Depends(get_db)):
 def get_leads(db: Session = Depends(get_db)):
     from app.models.lead import Lead
     from app.schemas.review import LeadSchema
-    leads = db.query(Lead).all()
+    leads = db.query(Lead).order_by(Lead.created_at.desc()).all()
     return [LeadSchema.model_validate(l) for l in leads]
+
+@router.post("/leads/{lead_id}/approve")
+def approve_lead(lead_id: int, db: Session = Depends(get_db)):
+    from app.models.lead import Lead, LeadStatus
+    lead = db.query(Lead).filter(Lead.id == lead_id).first()
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    lead.status = LeadStatus.approved
+    db.commit()
+    return {"message": "Lead approved"}
+
+@router.post("/leads/{lead_id}/reject")
+def reject_lead(lead_id: int, db: Session = Depends(get_db)):
+    from app.models.lead import Lead, LeadStatus
+    lead = db.query(Lead).filter(Lead.id == lead_id).first()
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    lead.status = LeadStatus.rejected
+    db.commit()
+    return {"message": "Lead rejected"}

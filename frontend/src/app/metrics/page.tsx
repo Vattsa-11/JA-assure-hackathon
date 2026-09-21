@@ -40,7 +40,7 @@ export default function MetricsPage() {
   );
 
   return (
-    <div>
+    <div style={{ padding: '2.5rem 3rem', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
         <div>
           <h1>Performance Metrics</h1>
@@ -50,37 +50,37 @@ export default function MetricsPage() {
       </div>
 
       <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
-        <div className="glass-panel" style={{ padding: '2.5rem', textAlign: 'center' }}>
-          <div style={{ fontSize: '0.875rem', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1rem' }}>
+        <div className="ui-card" style={{ padding: '2.5rem', textAlign: 'center', background: 'var(--pastel-yellow)', border: 'none' }}>
+          <div style={{ fontSize: '0.875rem', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1rem', color: 'var(--foreground)', fontWeight: 600 }}>
             Rejection Rate
           </div>
-          <div style={{ fontSize: '3.5rem', fontWeight: 'bold', color: 'var(--primary)', lineHeight: 1 }}>
+          <div style={{ fontSize: '3.5rem', fontWeight: 'bold', color: 'var(--foreground)', lineHeight: 1 }}>
             {metrics?.rejection_rate?.toFixed(1)}%
           </div>
-          <p style={{ fontSize: '0.875rem', opacity: 0.6, marginTop: '1rem', marginBottom: 0 }}>
+          <p style={{ fontSize: '0.875rem', opacity: 0.7, marginTop: '1rem', marginBottom: 0, color: 'var(--foreground)' }}>
             Assets that required human correction
           </p>
         </div>
 
-        <div className="glass-panel" style={{ padding: '2.5rem', textAlign: 'center' }}>
-          <div style={{ fontSize: '0.875rem', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1rem' }}>
+        <div className="ui-card" style={{ padding: '2.5rem', textAlign: 'center', background: 'var(--pastel-green)', border: 'none' }}>
+          <div style={{ fontSize: '0.875rem', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1rem', color: 'var(--foreground)', fontWeight: 600 }}>
             Edit Intensity
           </div>
-          <div style={{ fontSize: '3.5rem', fontWeight: 'bold', color: 'var(--success)', lineHeight: 1 }}>
+          <div style={{ fontSize: '3.5rem', fontWeight: 'bold', color: 'var(--foreground)', lineHeight: 1 }}>
             {metrics?.edit_intensity?.toFixed(2)}
           </div>
-          <p style={{ fontSize: '0.875rem', opacity: 0.6, marginTop: '1rem', marginBottom: 0 }}>
+          <p style={{ fontSize: '0.875rem', opacity: 0.7, marginTop: '1rem', marginBottom: 0, color: 'var(--foreground)' }}>
             Avg content versions per asset (&gt;1.0 = edits required)
           </p>
         </div>
       </div>
 
-      <div className="glass-panel" style={{ marginTop: '2rem', padding: '2rem' }}>
-        <h3 style={{ marginBottom: '1rem' }}>How the Feedback Loop Works</h3>
+      <div className="ui-card" style={{ marginTop: '2.5rem', padding: '2.5rem', background: 'white' }}>
+        <h3 style={{ marginBottom: '1rem', fontSize: '1.25rem' }}>How the Feedback Loop Works</h3>
         <p style={{ opacity: 0.7, lineHeight: 1.7, margin: 0 }}>
           Every time you <strong>reject</strong> an asset and write a feedback note, that lesson is stored in the database 
-          and automatically injected into the AI agent's context the next time it generates content for that brand. 
-          The <strong>rejection rate</strong> should trend downward over time as the agent learns your brand's standards.
+          and automatically injected into the AI agent&apos;s context the next time it generates content for that brand. 
+          The <strong>rejection rate</strong> should trend downward over time as the agent learns your brand&apos;s standards.
           The <strong>edit intensity</strong> tracks how many revisions an asset needs — lower is better.
         </p>
       </div>

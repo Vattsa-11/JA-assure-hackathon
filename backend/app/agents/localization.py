@@ -50,7 +50,7 @@ CRITICAL RULES:
     localized_text = llm_client.generate_text(
         prompt=latest_version.content_text,
         system_prompt=system_prompt,
-        model_name="llama3-70b-8192",
+        model_name="qwen/qwen3.8-27b",
         temperature=0.4
     ).strip()
 

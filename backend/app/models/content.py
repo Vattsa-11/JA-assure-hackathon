@@ -14,6 +14,7 @@ class ContentAsset(BaseModel):
 
     brand_id = Column(Integer, ForeignKey("brands.id", ondelete="CASCADE"), nullable=False)
     source_asset_id = Column(Integer, ForeignKey("content_assets.id", ondelete="CASCADE"), nullable=True)
+    topic = Column(String, nullable=True)
     status = Column(Enum(ContentStatus), default=ContentStatus.draft, nullable=False)
     platform = Column(String, nullable=False)
     language = Column(String, default="en", nullable=False)

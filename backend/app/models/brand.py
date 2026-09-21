@@ -6,3 +6,4 @@ class Brand(BaseModel):
 
     name = Column(String, index=True, nullable=False)
     voice_description = Column(String, nullable=False)
+    color = Column(String, default="#202020")

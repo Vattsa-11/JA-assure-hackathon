@@ -24,7 +24,7 @@ Return ONLY the exact spoken words — no stage directions, no scene labels, no 
     script_text = llm_client.generate_text(
         prompt=topic,
         system_prompt=system_prompt,
-        model_name="llama3-70b-8192",
+        model_name="qwen/qwen3.8-27b",
         temperature=0.7
     ).strip()
 
@@ -33,6 +33,7 @@ Return ONLY the exact spoken words — no stage directions, no scene labels, no 
         brand_id=brand_id,
         platform="tiktok_reels",
         language="en",
+        topic=topic,
         status=ContentStatus.draft
     )
     db.add(asset)
@@ -57,11 +58,12 @@ Return ONLY the exact spoken words — no stage directions, no scene labels, no 
         raise RuntimeError("TTS audio generation failed")
 
     # 4. Assemble video
-    tts_video_client.assemble_video(script_text, audio_filename, video_filename)
+    tts_video_client.assemble_video(script_text, audio_filename, video_filename, bg_color=brand.color)
 
     # 5. Save VideoAsset record
     video_asset = VideoAsset(
         content_asset_id=asset.id,
+        topic=topic,
         script_text=script_text,
         video_file_path=video_filename
     )

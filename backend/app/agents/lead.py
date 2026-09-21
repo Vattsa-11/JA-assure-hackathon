@@ -45,18 +45,23 @@ Score the lead from 0 to 100 on how well they fit our insurance products.
 Provide a short plain-text reason for the score.
 Draft a personalized outreach email referencing their specific business name and scraped details.
 
+IMPORTANT RULES for the drafted email:
+1. DO NOT use generic placeholders like [Name], [Your Name], or [Insert Link].
+2. Address the email to the general business team if a specific contact person is unknown (e.g., "Hello [Business Name] Team," or simply "Hello,"). DO NOT address the business as if it were a person (e.g., do not say "Dear Michael Trio,").
+3. Sign off as "The {brand.name} Team".
+
 Return JSON:
 {{{{
     "fit_score": 85,
     "fit_reason": "They are a local jewelry shop that...",
-    "draft_outreach": "Hi [Name],\\n..."
+    "draft_outreach": "Hello [Business Name] Team,\\n..."
 }}}}
 """
         try:
             result_json = llm_client.generate_json(
                 prompt=prompt,
                 system_prompt=system_prompt,
-                model_name="llama3-70b-8192",
+                model_name="qwen/qwen3.8-27b",
                 temperature=0.3
             )
             

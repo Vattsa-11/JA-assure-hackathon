@@ -1,22 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+
 :root {
-  --background: #0f172a; /* Slate 900 */
-  --foreground: #f8fafc; /* Slate 50 */
-  --primary: #8b5cf6; /* Violet 500 */
-  --primary-hover: #7c3aed; /* Violet 600 */
-  --card-bg: rgba(30, 41, 59, 0.6); /* Slate 800 with opacity for glass */
-  --card-border: rgba(148, 163, 184, 0.1);
+  --background: #F8F9FA;
+  --foreground: #111111;
+  --sidebar-bg: #000000;
+  --card-bg: #FFFFFF;
+  --pastel-blue: #E5F0F9;
+  --pastel-green: #EAF5E4;
+  --pastel-yellow: #FFF4E0;
+  --border: #EBEBEB;
+  --primary: #111111;
+  --primary-hover: #333333;
   --success: #10b981;
-  --danger: #ef4444;
+  --danger: #FF6575;
   --warning: #f59e0b;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(56, 189, 248, 0.1) 0px, transparent 50%);
-  background-attachment: fixed;
+  font-family: 'Nunito', system-ui, -apple-system, sans-serif;
   margin: 0;
   padding: 0;
   min-height: 100vh;
@@ -26,135 +29,143 @@ body {
   box-sizing: border-box;
 }
 
-/* Glassmorphism Classes */
-.glass-panel {
+.line-clamp-4 {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ui-card {
   background: var(--card-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--card-border);
+  border: 1px solid var(--border);
   border-radius: 16px;
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ui-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.05);
+}
+
+.dark-card {
+  background: var(--sidebar-bg);
+  color: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.dark-card input, .dark-card select {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  width: 100%;
+  font-family: inherit;
+  outline: none;
+}
+.dark-card input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+.dark-card select option {
+  color: black;
 }
 
 .btn {
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  border-radius: 50px;
   border: none;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 0.875rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
-.btn:hover {
-  transform: translateY(-1px);
+.btn-white {
+  background: white;
+  color: var(--accent);
+}
+.btn-white:hover {
+  background: #f8f9fa;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.15);
 }
 
-.btn-primary { background: var(--primary); color: white; }
-.btn-primary:hover { background: var(--primary-hover); }
-.btn-success { background: var(--success); color: white; }
-.btn-success:hover { background: #059669; }
-.btn-danger { background: var(--danger); color: white; }
-.btn-danger:hover { background: #dc2626; }
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+.btn-primary:hover {
+  background: var(--primary-hover);
+}
 
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
+.btn-danger {
+  background: var(--danger);
+  color: white;
+}
+
+.btn-success {
+  background: var(--success);
+  color: white;
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1.5rem;
 }
 
-h1, h2, h3 {
-  margin-top: 0;
-  letter-spacing: -0.025em;
-}
-
-/* Navigation */
-.navbar {
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(45, 52, 54, 0.4);
+  backdrop-filter: blur(4px);
   display: flex;
-  gap: 2rem;
-  padding: 1.5rem 2rem;
-  border-bottom: 1px solid var(--card-border);
-  margin-bottom: 2rem;
+  justify-content: center;
   align-items: center;
+  z-index: 1000;
 }
 
-.navbar a {
-  color: var(--foreground);
-  text-decoration: none;
-  font-weight: 500;
-  opacity: 0.7;
-  transition: opacity 0.2s;
-}
-
-.navbar a:hover, .navbar a.active {
-  opacity: 1;
-  color: var(--primary);
+.modal-content {
+  background: white;
+  border-radius: 24px;
+  padding: 2rem;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.1);
 }
 
 .tag {
-  display: inline-block;
   padding: 0.25rem 0.75rem;
-  border-radius: 999px;
+  border-radius: 50px;
   font-size: 0.75rem;
-  font-weight: 600;
-  background: rgba(255,255,255,0.1);
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.card-content {
-  padding: 1.5rem;
+.tag-primary { background: rgba(90, 82, 255, 0.1); color: var(--primary); }
+.tag-success { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+.tag-danger { background: rgba(255, 101, 117, 0.1); color: var(--danger); }
+.tag-gray { background: #f1f2f6; color: #747d8c; }
+
+details {
+  border-radius: 20px;
+  overflow: hidden;
+}
+summary {
+  list-style: none;
+  outline: none;
+}
+summary::-webkit-details-marker {
+  display: none;
 }
 
-.card-actions {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--card-border);
-  display: flex;
-  gap: 1rem;
-  justify-content: flex-end;
-}
-
-textarea {
-  width: 100%;
-  background: rgba(0,0,0,0.2);
-  border: 1px solid var(--card-border);
-  color: white;
-  padding: 0.75rem;
-  border-radius: 8px;
-  font-family: inherit;
-  margin-top: 0.5rem;
-}
-
-input, select {
-  width: 100%;
-  background: rgba(0,0,0,0.2);
-  border: 1px solid var(--card-border);
-  color: white;
-  padding: 0.75rem;
-  border-radius: 8px;
-  font-family: inherit;
-  margin-top: 0.5rem;
-}
-
-/* Modal */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-}
-.modal-content {
-  width: 100%;
-  max-width: 500px;
-  padding: 2rem;
-}
+.nav-link { text-decoration: none; color: rgba(255, 255, 255, 0.7); font-weight: 700; padding: 0.5rem 1rem; border-radius: 8px; transition: all 0.2s ease; }
+.nav-link:hover { color: white; background: rgba(255, 255, 255, 0.1); }

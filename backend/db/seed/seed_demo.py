@@ -1,66 +1,79 @@
 import sys
-import os
-import logging
-from sqlalchemy.orm import Session
+import time
+from pathlib import Path
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+backend_dir = Path(__file__).resolve().parents[2]
+sys.path.append(str(backend_dir))
 
 from app.core.db import SessionLocal
 from app.models.brand import Brand
-from app.models.content import ContentAsset, ContentStatus, Feedback, ContentVersion
-from app.graphs.content_pipeline import content_graph
-from app.graphs.lead_pipeline import lead_graph
+from app.models.content import ContentAsset, ContentVersion, Feedback, ContentStatus
+from app.api.pipeline import _run_content, _run_leads
+from app.agents.content import generate_content
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-def run_seed():
+def seed_demo():
+    """
+    Seeds demo data by running the actual pipelines so the dashboard 
+    is populated with realistic data and a real feedback history.
+    """
     db = SessionLocal()
-    
-    brand = db.query(Brand).filter(Brand.name == 'Jade').first()
-    if not brand:
-        logger.error("Brand 'Jade' not found. Please run seed_brands.py first.")
-        db.close()
-        return
-
-    logger.info("Running Content Pipeline to generate demo data...")
     try:
-        result = content_graph.invoke({
-            "brand_id": brand.id,
-            "topic": "Why jewelry insurance is critical for engagement rings.",
-            "generated_asset_ids": []
-        })
+        jade = db.query(Brand).filter(Brand.name == "Jade").first()
+        doc = db.query(Brand).filter(Brand.name == "DoctorShield").first()
         
-        asset_ids = result.get("generated_asset_ids", [])
-        if asset_ids:
-            # Simulate a human rejection for the metrics dashboard
-            rejected_asset_id = asset_ids[0]
-            asset = db.query(ContentAsset).filter(ContentAsset.id == rejected_asset_id).first()
-            if asset:
-                asset.status = ContentStatus.draft
-                
-                feedback = Feedback(
-                    content_asset_id=asset.id,
-                    reason_tag="tone",
-                    note="Too casual. Jade is a premium brand, we need to sound more professional and luxurious."
-                )
-                db.add(feedback)
-                db.commit()
-                logger.info(f"Simulated human rejection on asset {asset.id} to populate metrics.")
-                
-        logger.info("Running Lead Pipeline...")
-        lead_graph.invoke({
-            "brand_id": brand.id,
-            "niche": "jewellery",
-            "region": "Singapore",
-            "generated_lead_ids": []
-        })
-        logger.info("Demo data seeded successfully.")
+        if not jade or not doc:
+            print("Brands missing. Run seed_brands.py first.")
+            return
+
+        print("--- Seeding Content & Generating Real Feedback History ---")
+        topic = "New cyber protection policy for jewelry stores"
+        # Generate initial assets
+        assets = generate_content(db, jade.id, topic)
         
+        li_asset = [a for a in assets if a.platform == "linkedin"][0]
+        
+        # We must commit the assets before hitting the API, so the API can find the asset.
+        db.commit()
+        
+        print(f"Calling real API endpoint to reject asset {li_asset.id}...")
+        # Programmatically reject the LinkedIn variant using the actual FastAPI app logic
+        # by calling the endpoint function directly (or via TestClient) to ensure
+        # the exact same logic runs as if a human clicked it.
+        from fastapi.testclient import TestClient
+        from app.main import app
+        
+        client = TestClient(app)
+        response = client.post(
+            f"/review/{li_asset.id}/reject",
+            json={
+                "reason_tag": "too_salesy",
+                "note": "Too aggressive. Do not use urgency language or emojis. Keep it extremely professional."
+            }
+        )
+        print(f"API Reject Status: {response.status_code}")
+        if response.status_code != 200:
+            print(f"Error rejecting: {response.text}")
+
+        # Mark others as approved for metrics via the real API
+        for a in assets:
+            if a.id != li_asset.id:
+                resp = client.post(f"/review/{a.id}/approve")
+                print(f"API Approve Status for {a.id}: {resp.status_code}")
+
+        print("--- Running Content Pipeline (Background) ---")
+        # Run a real content pipeline run so the queue has pending items
+        _run_content(doc.id, "Medical malpractice insurance simplified for new clinics")
+        
+        print("--- Running Lead Pipeline (Background) ---")
+        # Run a real lead pipeline run so the leads dashboard has pending leads
+        _run_leads(jade.id, "jewelry", "Singapore")
+        
+        print("Demo seed complete! The dashboard is now ready for a live presentation.")
+
     except Exception as e:
-        logger.warning(f"Could not complete real generation (expected if no GROQ_API_KEY). Error: {e}")
+        print(f"Seed failed: {e}")
     finally:
         db.close()
 
 if __name__ == "__main__":
-    run_seed()
+    seed_demo()

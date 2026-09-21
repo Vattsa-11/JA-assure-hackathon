@@ -12,3 +12,6 @@ class LeadRunRequest(BaseModel):
 class VideoRunRequest(BaseModel):
     brand_id: int
     topic: str
+
+class ResearchRunRequest(BaseModel):
+    urls: list[str]

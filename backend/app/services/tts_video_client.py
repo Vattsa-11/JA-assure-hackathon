@@ -37,55 +37,86 @@ class TTSVideoClient:
             logger.error(f"Failed to generate TTS audio: {str(e)}")
             return False
 
-    def assemble_video(self, script_text: str, audio_path: str, output_video_path: str) -> bool:
+    def assemble_video(self, script_text: str, audio_path: str, output_video_path: str, bg_color: str = "#202020") -> bool:
         """
-        Assembles an MP4 using MoviePy: dark background + text overlay + TTS audio.
+        Assembles an MP4 using MoviePy: brand background + timed text chunks + TTS audio.
         Compatible with MoviePy v1 and v2.
         """
         if MOVIEPY_V2 is None:
             logger.error("MoviePy not installed. Cannot assemble video.")
             return False
 
+        def hex_to_rgb(hex_str):
+            h = hex_str.lstrip('#')
+            if len(h) == 6:
+                return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+            return (32, 32, 32)
+
         try:
             audio_clip = AudioFileClip(audio_path)
             duration = audio_clip.duration
+            bg_rgb = hex_to_rgb(bg_color)
+            
+            if MOVIEPY_V2:
+                bg_clip = ColorClip(size=(1080, 1920), color=bg_rgb).with_duration(duration)
+            else:
+                bg_clip = ColorClip(size=(1080, 1920), color=bg_rgb).set_duration(duration)
 
-            display_text = (script_text[:120] + "...") if len(script_text) > 120 else script_text
+            words = script_text.split()
+            if not words:
+                words = ["(No", "audio)"]
+            
+            chunk_size = 7
+            chunks = [" ".join(words[i:i+chunk_size]) for i in range(0, len(words), chunk_size)]
+            words_per_sec = len(words) / duration if duration > 0 else 1
+            
+            clips = [bg_clip]
+            current_time = 0.0
+            
+            for chunk in chunks:
+                chunk_duration = len(chunk.split()) / words_per_sec
+                if current_time >= duration:
+                    break
+                if current_time + chunk_duration > duration:
+                    chunk_duration = duration - current_time
+
+                try:
+                    if MOVIEPY_V2:
+                        txt_clip = (
+                            TextClip(
+                                text=chunk,
+                                font_size=70,
+                                color="white",
+                                size=(980, None),
+                                method="caption"
+                            )
+                            .with_position(("center", 1250))
+                            .with_start(current_time)
+                            .with_duration(chunk_duration)
+                        )
+                    else:
+                        txt_clip = (
+                            TextClip(
+                                chunk,
+                                fontsize=70,
+                                color="white",
+                                size=(980, None),
+                                method="caption"
+                            )
+                            .set_position(("center", 1250))
+                            .set_start(current_time)
+                            .set_duration(chunk_duration)
+                        )
+                    clips.append(txt_clip)
+                except Exception as e:
+                    logger.warning(f"TextClip failed for chunk: {e}")
+                
+                current_time += chunk_duration
 
             if MOVIEPY_V2:
-                # MoviePy v2 API
-                bg_clip = ColorClip(size=(1080, 1920), color=(20, 20, 20)).with_duration(duration)
-                try:
-                    txt_clip = (
-                        TextClip(
-                            text=display_text,
-                            font_size=60,
-                            color="white",
-                            size=(900, None),
-                            method="caption",
-                        )
-                        .with_position("center")
-                        .with_duration(duration)
-                    )
-                    video = CompositeVideoClip([bg_clip, txt_clip])
-                except Exception as e:
-                    logger.warning(f"TextClip failed (font/ImageMagick missing?): {e}. Using plain background.")
-                    video = bg_clip
-                video = video.with_audio(audio_clip)
+                video = CompositeVideoClip(clips).with_audio(audio_clip)
             else:
-                # MoviePy v1 API
-                bg_clip = ColorClip(size=(1080, 1920), color=(20, 20, 20)).set_duration(duration)
-                try:
-                    txt_clip = (
-                        TextClip(display_text, fontsize=60, color="white", size=(900, None), method="caption")
-                        .set_position("center")
-                        .set_duration(duration)
-                    )
-                    video = CompositeVideoClip([bg_clip, txt_clip])
-                except Exception as e:
-                    logger.warning(f"TextClip failed: {e}. Using plain background.")
-                    video = bg_clip
-                video = video.set_audio(audio_clip)
+                video = CompositeVideoClip(clips).set_audio(audio_clip)
 
             video.write_videofile(
                 output_video_path,
