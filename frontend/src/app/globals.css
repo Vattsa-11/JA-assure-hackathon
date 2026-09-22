@@ -367,12 +367,13 @@ select {
   background: rgba(90, 82, 255, 0.07);
   color: var(--primary);
   border-color: rgba(90, 82, 255, 0.25);
-}
-
-.lang-globe { font-size: 1rem; line-height: 1; }
-
-.lang-chevron {
-  font-size: 0.7rem;
+}.lang-globe { font-size: 1rem; line-height: 1; }
+.lang-chevron {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid rgba(255, 255, 255, 0.7);
   transition: transform 0.15s ease;
 }
 .lang-chevron-open { transform: rotate(180deg); }
@@ -424,7 +425,14 @@ select {
 
 .lang-option-label { flex: 1; }
 
-.lang-check { color: var(--primary); font-weight: 800; }
+.lang-check {
+  width: 7px;
+  height: 12px;
+  border-right: 2.5px solid var(--primary);
+  border-bottom: 2.5px solid var(--primary);
+  transform: rotate(45deg);
+  margin-left: auto;
+}
 
 /* ------------------- */
 /* Nav                 */

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import T from '../i18n/T';
+import Select from '../components/Select';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -185,11 +186,13 @@ export default function UnifiedDashboard() {
             <form onSubmit={handleGenerate} style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
               <div style={{ flex: '1 1 200px' }}>
                 <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: 600 }}>{t('dash.selectBrand')}</label>
-                <select value={selectedBrand} onChange={e => setSelectedBrand(e.target.value)} required>
-                  {brands.map(b => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </select>
+                <Select
+                  variant="dark"
+                  value={selectedBrand}
+                  onChange={setSelectedBrand}
+                  options={brands.map(b => ({ value: String(b.id), label: b.name }))}
+                  required
+                />
               </div>
               <div style={{ flex: '2 1 300px' }}>
                 <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: 600 }}>{t('dash.topic')}</label>
@@ -310,7 +313,7 @@ export default function UnifiedDashboard() {
                         {/* Lessons Visual cue */}
                         {Array.isArray(item.lessons) && item.lessons.length > 0 && (
                           <div style={{ fontSize: '0.75rem', color: 'var(--foreground)', marginTop: '0.25rem', fontWeight: 600, opacity: 0.7 }}>
-                            ✨ {t('dash.lessonsUsed', { n: item.lessons.length })}
+                            {t('dash.lessonsUsed', { n: item.lessons.length })}
                           </div>
                         )}
                       </div>
@@ -397,14 +400,20 @@ export default function UnifiedDashboard() {
                 
                 <div style={{ marginBottom: '1rem' }}>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>{t('dash.modal.reasonTag')}</label>
-                  <select value={rejectTag} onChange={e => setRejectTag(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '12px', border: '1px solid var(--border)', fontFamily: 'inherit' }}>
-                    <option value="tone">{t('reject.tone')}</option>
-                    <option value="compliance">{t('reject.compliance')}</option>
-                    <option value="accuracy">{t('reject.accuracy')}</option>
-                    <option value="too_salesy">{t('reject.too_salesy')}</option>
-                    <option value="off_brand">{t('reject.off_brand')}</option>
-                    <option value="other">{t('reject.other')}</option>
-                  </select>
+                  <Select
+                    variant="light"
+                    value={rejectTag}
+                    onChange={setRejectTag}
+                    options={[
+                      { value: 'tone', label: t('reject.tone') },
+                      { value: 'compliance', label: t('reject.compliance') },
+                      { value: 'accuracy', label: t('reject.accuracy') },
+                      { value: 'too_salesy', label: t('reject.too_salesy') },
+                      { value: 'off_brand', label: t('reject.off_brand') },
+                      { value: 'other', label: t('reject.other') },
+                    ]}
+                    style={{ width: '100%', borderRadius: '12px', padding: '0.75rem 0.9rem' }}
+                  />
                 </div>
                 <div style={{ marginBottom: '1.5rem' }}>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
