@@ -2,16 +2,21 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useLanguage } from '../i18n/LanguageContext';
+import type { TranslationKey } from '../i18n/translations';
+import LanguageSwitcher from './LanguageSwitcher';
 
-const LINKS = [
-  { href: '/', label: 'Dashboard' },
-  { href: '/leads', label: 'Leads Intelligence' },
-  { href: '/metrics', label: 'Metrics' },
-  { href: '/queue', label: 'Review Queue' },
+const LINKS: { href: string; key: TranslationKey }[] = [
+  { href: '/', key: 'nav.dashboard' },
+  { href: '/leads', key: 'nav.leads' },
+  { href: '/competitors', key: 'nav.competitors' },
+  { href: '/metrics', key: 'nav.metrics' },
+  { href: '/queue', key: 'nav.queue' },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
+  const { t } = useLanguage();
 
   return (
     <nav className="app-nav">
@@ -23,10 +28,11 @@ export default function Navbar() {
             href={link.href}
             className={`nav-link${pathname === link.href ? ' nav-link-active' : ''}`}
           >
-            {link.label}
+            {t(link.key)}
           </Link>
         ))}
       </div>
+      <LanguageSwitcher />
     </nav>
   );
 }

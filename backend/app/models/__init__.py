@@ -9,7 +9,8 @@ from app.models.content import (
 )
 from app.models.lead import Lead, LeadStatus
 from app.models.media import VideoAsset
-from app.models.research import CompetitorDigestEntry
+from app.models.research import CompetitorDigestEntry, TrackedCompetitor
+from app.models.translation import TranslationCache
 
 __all__ = [
     "BaseModel",
@@ -22,5 +23,6 @@ __all__ = [
     "Feedback",
     "Lead",
     "LeadStatus",
+    "TranslationCache",
     "VideoAsset"
 ]

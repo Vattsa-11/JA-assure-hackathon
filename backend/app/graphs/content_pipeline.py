@@ -22,12 +22,14 @@ class ContentState(TypedDict):
     target_languages: list[str]
     localized_asset_ids: list[int]
     localized_failed_ids: list[int]
+    # Native generation language for this campaign ("en" default)
+    language: str
 
 
 def generate_node(state: ContentState) -> dict:
     db = SessionLocal()
     try:
-        assets = generate_content(db, state["brand_id"], state["topic"])
+        assets = generate_content(db, state["brand_id"], state["topic"], state.get("language", "en"))
         asset_ids = [a.id for a in assets]
         return {"generated_asset_ids": asset_ids, "passed_asset_ids": [], "failed_asset_ids": []}
     finally:

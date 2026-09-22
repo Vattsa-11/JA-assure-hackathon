@@ -8,13 +8,14 @@ from app.services.hunter_client import hunter_client
 from app.services.llm_client import llm_client
 from app.services.osm_client import osm_client
 from app.services.scraping_client import scraping_client
+from app.services.translation_service import TARGET_LANGUAGES
 
 logger = logging.getLogger(__name__)
 
-def find_leads(db: Session, brand_id: int, niche: str, region: str) -> list[Lead]:
+def find_leads(db: Session, brand_id: int, niche: str, region: str, language: str = "en") -> list[Lead]:
     """
     Finds leads via OSM, enriches them via scraping, finds emails via Hunter,
-    scores them, and drafts outreach.
+    scores them, and drafts outreach (in the requested language).
     """
     brand = db.query(Brand).filter(Brand.id == brand_id).first()
     if not brand:
@@ -40,9 +41,18 @@ Niche: {niche}
 Region: {region}
 Website Text: {scraped_text[:1500]}
 """
+        language_instruction = ""
+        if language != "en" and language in TARGET_LANGUAGES:
+            language_full = TARGET_LANGUAGES[language]
+            language_instruction = (
+                f"\nLANGUAGE REQUIREMENT: Write 'fit_reason' and 'draft_outreach' natively in "
+                f"{language_full} — not translated English. Adapt tone, idioms and cultural context "
+                f"for a native {language_full} speaker. Keep JSON keys in English.\n"
+            )
+
         system_prompt = f"""You are a lead qualifier and SDR for {brand.name}.
 {brand.voice_description}
-
+{language_instruction}
 Score the lead from 0 to 100 on how well they fit our insurance products.
 Provide a short plain-text reason for the score.
 Draft a personalized outreach email referencing their specific business name and scraped details.

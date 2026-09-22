@@ -1,9 +1,11 @@
 "use client";
 import { useEffect, useState } from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export default function MetricsPage() {
+  const { t } = useLanguage();
   const [metrics, setMetrics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,16 +29,16 @@ export default function MetricsPage() {
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
-      <p style={{ opacity: 0.7 }}>Loading metrics...</p>
+      <p style={{ opacity: 0.7 }}>{t('metrics.loading')}</p>
     </div>
   );
 
   if (error) return (
     <div className="page-container">
       <div className="glass-panel" style={{ padding: '2rem', border: '1px solid rgba(255,101,117,0.4)' }}>
-        <h3 style={{ color: 'var(--danger)', marginTop: 0 }}>Error</h3>
+        <h3 style={{ color: 'var(--danger)', marginTop: 0 }}>{t('metrics.error')}</h3>
         <p>{error}</p>
-        <button className="btn btn-primary" onClick={fetchMetrics}>Retry</button>
+        <button className="btn btn-primary" onClick={fetchMetrics}>{t('metrics.retry')}</button>
       </div>
     </div>
   );
@@ -45,43 +47,40 @@ export default function MetricsPage() {
     <div className="page-container">
       <div className="page-header">
         <div>
-          <h1>Performance Metrics</h1>
-          <p className="page-subtitle">Live insights into agent learning and compliance rates.</p>
+          <h1>{t('metrics.title')}</h1>
+          <p className="page-subtitle">{t('metrics.subtitle')}</p>
         </div>
-        <button className="btn btn-primary" onClick={fetchMetrics}>↻ Refresh</button>
+        <button className="btn btn-primary" onClick={fetchMetrics}>{t('metrics.refresh')}</button>
       </div>
 
       <div className="grid">
         <div className="glass-panel kpi-card">
           <div className="kpi-accent-bar kpi-accent-purple" />
-          <div className="kpi-label">Rejection Rate</div>
+          <div className="kpi-label">{t('metrics.rejectionRate')}</div>
           <div className="kpi-value kpi-value-purple">
             {metrics?.rejection_rate?.toFixed(1)}%
           </div>
           <p className="kpi-hint">
-            Assets that required human correction
+            {t('metrics.rejectionHint')}
           </p>
         </div>
 
         <div className="glass-panel kpi-card">
           <div className="kpi-accent-bar kpi-accent-green" />
-          <div className="kpi-label">Edit Intensity</div>
+          <div className="kpi-label">{t('metrics.editIntensity')}</div>
           <div className="kpi-value kpi-value-green">
             {metrics?.edit_intensity?.toFixed(2)}
           </div>
           <p className="kpi-hint">
-            Avg content versions per asset (&gt;1.0 = edits required)
+            {t('metrics.editHint')}
           </p>
         </div>
       </div>
 
       <div className="glass-panel" style={{ marginTop: '2rem', padding: '2rem' }}>
-        <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>How the Feedback Loop Works</h3>
+        <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>{t('metrics.loopTitle')}</h3>
         <p style={{ opacity: 0.7, lineHeight: 1.7, margin: 0 }}>
-          Every time you <strong>reject</strong> an asset and write a feedback note, that lesson is stored in the database 
-          and automatically injected into the AI agent&apos;s context the next time it generates content for that brand. 
-          The <strong>rejection rate</strong> should trend downward over time as the agent learns your brand&apos;s standards.
-          The <strong>edit intensity</strong> tracks how many revisions an asset needs — lower is better.
+          {t('metrics.loopDesc')}
         </p>
       </div>
     </div>

@@ -4,9 +4,10 @@ from app.agents.lessons import get_relevant_lessons
 from app.models.brand import Brand
 from app.models.content import ContentAsset, ContentStatus, ContentVersion
 from app.services.llm_client import llm_client
+from app.services.translation_service import TARGET_LANGUAGES
 
 
-def generate_content(db: Session, brand_id: int, topic: str) -> list[ContentAsset]:
+def generate_content(db: Session, brand_id: int, topic: str, language: str = "en") -> list[ContentAsset]:
     """
     Generates 2 A/B content variants per platform (6 assets total for LinkedIn, Instagram, X).
     Injects past rejection lessons to prevent repeating mistakes.
@@ -18,11 +19,17 @@ def generate_content(db: Session, brand_id: int, topic: str) -> list[ContentAsse
     lessons = get_relevant_lessons(db, brand_id)
     lessons_text = "\n".join(lessons) if lessons else "No past feedback yet."
 
+    language_instruction = ""
+    if language != "en" and language in TARGET_LANGUAGES:
+        language_full = TARGET_LANGUAGES[language]
+        language_instruction = f"\nLANGUAGE REQUIREMENT: Write ALL variants natively in {language_full} — not translated English. Adapt tone, idioms and cultural context for a native {language_full} speaker. Do not mix English into the output.\n"
+
     system_prompt = f"""You are an expert copywriter for '{brand.name}'.
 Brand Voice: {brand.voice_description}
 
 CRITICAL RULES BASED ON PAST FEEDBACK — Avoid these mistakes at all costs:
 {lessons_text}
+{language_instruction}
 
 Generate TWO (2) distinct A/B variants for each of the three platforms below for the given topic.
 Variant A and Variant B should have meaningfully different hooks, angles, or tone while staying on-brand.
@@ -65,7 +72,7 @@ Return a valid JSON object with this exact structure:
         asset = ContentAsset(
             brand_id=brand_id,
             platform=platform,
-            language="en",
+            language=language if (language in TARGET_LANGUAGES) else "en",
             topic=topic,
             status=ContentStatus.draft
         )

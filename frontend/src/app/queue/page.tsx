@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
+import T from '../../i18n/T';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -13,6 +15,7 @@ const CHAR_LIMITS: Record<string, number> = {
 const platformTagClass = (platform: string) =>
   `tag tag-platform-${(platform || '').toLowerCase().replace(/^x$/, 'x').replace(/\s+/g, '-')}`;
 export default function QueuePage() {
+  const { t, language } = useLanguage();
   const [assets, setAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -126,7 +129,7 @@ export default function QueuePage() {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
       <div style={{ textAlign: 'center', opacity: 0.7 }}>
         <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
-        <p>Loading queue...</p>
+        <p>{t('queue.loading')}</p>
       </div>
     </div>
   );
@@ -134,9 +137,9 @@ export default function QueuePage() {
   if (error) return (
     <div className="page-container">
       <div className="glass-panel" style={{ padding: '2rem', border: '1px solid rgba(255,101,117,0.4)' }}>
-        <h3 style={{ color: 'var(--danger)', marginTop: 0 }}>Error</h3>
+        <h3 style={{ color: 'var(--danger)', marginTop: 0 }}>{t('queue.error')}</h3>
         <p>{error}</p>
-        <button className="btn btn-primary" onClick={fetchQueue}>Retry</button>
+        <button className="btn btn-primary" onClick={fetchQueue}>{t('queue.retry')}</button>
       </div>
     </div>
   );
@@ -145,20 +148,20 @@ export default function QueuePage() {
     <div className="page-container">
       <div className="page-header">
         <div>
-          <h1>Approval Queue</h1>
+          <h1>{t('queue.title')}</h1>
           <p className="page-subtitle">
-            {assets.length} item{assets.length === 1 ? '' : 's'} awaiting review.
+            {t('queue.subtitle', { n: assets.length })}
           </p>
         </div>
-        <button className="btn" style={{ background: 'var(--foreground)', color: 'white' }} onClick={fetchQueue}>↻ Refresh</button>
+        <button className="btn" style={{ background: 'var(--foreground)', color: 'white' }} onClick={fetchQueue}>{t('queue.refresh')}</button>
       </div>
 
       {assets.length === 0 ? (
         <div className="ui-card" style={{ padding: '4rem', textAlign: 'center' }}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
-          <h3>All caught up!</h3>
+          <h3>{t('queue.emptyTitle')}</h3>
           <p style={{ opacity: 0.6, maxWidth: '400px', margin: '0 auto' }}>
-            There are no items pending review right now. Run the pipeline to generate new assets.
+            {t('queue.emptyDesc')}
           </p>
         </div>
       ) : (
@@ -180,13 +183,13 @@ export default function QueuePage() {
                     <span className="tag tag-language">{(asset.language || '').toUpperCase()}</span>
                   </div>
                   <div className="queue-card-body">
-                    <span className="queue-card-hook">{hook}</span>
-                    {body && <span className="queue-card-body-text">{body}</span>}
+                    <span className="queue-card-hook"><T text={hook} /></span>
+                    {body && <span className="queue-card-body-text"><T text={body} /></span>}
                   </div>
                 </div>
                 <div style={{ padding: '0 1.5rem 1.5rem' }}>
                   <button className="btn queue-card-btn" onClick={() => openModal(asset)}>
-                    View / Edit
+                    {t('queue.viewEdit')}
                   </button>
                 </div>
               </div>
@@ -200,7 +203,7 @@ export default function QueuePage() {
         <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
           <div className="modal-content" style={{ maxWidth: '640px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', marginBottom: '1.5rem', alignItems: 'center' }}>
-              <h2 style={{ margin: 0, fontSize: '1.35rem' }}>Review Content</h2>
+              <h2 style={{ margin: 0, fontSize: '1.35rem' }}>{t('queue.modal.title')}</h2>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <span className={platformTagClass(viewingAsset.platform)}>{viewingAsset.platform}</span>
                 {viewingAsset.brand_name && <span className="tag tag-gray">{viewingAsset.brand_name}</span>}
@@ -221,9 +224,9 @@ export default function QueuePage() {
               <>
                 <div>
                   <div className="modal-label">
-                    <label htmlFor="review-textarea">Content Text</label>
+                    <label htmlFor="review-textarea">{t('queue.modal.contentText')}</label>
                     <span className={`char-count${editText.length > (CHAR_LIMITS[(viewingAsset.platform || '').toLowerCase()] || 2000) ? ' char-count-over' : ''}`}>
-                      {editText.length} / {CHAR_LIMITS[(viewingAsset.platform || '').toLowerCase()] || 2000} chars
+                      {editText.length} / {CHAR_LIMITS[(viewingAsset.platform || '').toLowerCase()] || 2000} {t('queue.modal.chars')}
                     </span>
                   </div>
                   <textarea
@@ -232,23 +235,28 @@ export default function QueuePage() {
                     value={editText}
                     onChange={e => setEditText(e.target.value)}
                   />
+                  {viewingAsset.language && viewingAsset.language !== language && (
+                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.4rem', opacity: 0.7, borderLeft: '2px solid var(--border)', paddingLeft: '0.6rem' }}>
+                      <T text={viewingAsset.content_text} />
+                    </p>
+                  )}
                 </div>
                 
                 <div className="modal-actions">
                   <button type="button" className="btn btn-danger" onClick={() => setIsRejecting(true)}>
-                    ✗ Reject
+                    {t('queue.modal.reject')}
                   </button>
                   <div style={{ display: 'flex', gap: '0.75rem' }}>
                     <button type="button" className="btn btn-ghost" onClick={closeModal}>
-                      Cancel
+                      {t('queue.modal.cancel')}
                     </button>
                     {editText !== viewingAsset.content_text ? (
                       <button type="button" className="btn btn-primary" onClick={handleSaveEdit}>
-                        ✓ Save & Approve
+                        {t('queue.modal.saveApprove')}
                       </button>
                     ) : (
                       <button type="button" className="btn btn-success" onClick={() => handleApprove(viewingAsset.id)}>
-                        ✓ Approve As-Is
+                        {t('queue.modal.approveAsIs')}
                       </button>
                     )}
                   </div>
@@ -256,38 +264,38 @@ export default function QueuePage() {
               </>
             ) : (
               <form onSubmit={handleReject}>
-                <h3 style={{ marginTop: 0, marginBottom: '0.5rem', color: 'var(--danger)' }}>Reject & Teach Agent</h3>
+                <h3 style={{ marginTop: 0, marginBottom: '0.5rem', color: 'var(--danger)' }}>{t('queue.modal.teachTitle')}</h3>
                 <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.88rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                  Your note is saved as a lesson — the agent reads it before generating content for this brand again.
+                  {t('queue.modal.teachDesc')}
                 </p>
                 <div style={{ marginBottom: '1.25rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 700, fontSize: '0.92rem' }}>Reason Tag</label>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 700, fontSize: '0.92rem' }}>{t('queue.modal.reasonTag')}</label>
                   <select value={rejectTag} onChange={e => setRejectTag(e.target.value)}>
-                    <option value="tone">Tone / Voice mismatch</option>
-                    <option value="compliance">Compliance issue</option>
-                    <option value="accuracy">Factually incorrect</option>
-                    <option value="too_salesy">Too sales-y / pushy</option>
-                    <option value="off_brand">Off-brand messaging</option>
-                    <option value="other">Other</option>
+                    <option value="tone">{t('reject.tone')}</option>
+                    <option value="compliance">{t('reject.compliance')}</option>
+                    <option value="accuracy">{t('reject.accuracy')}</option>
+                    <option value="too_salesy">{t('reject.too_salesy')}</option>
+                    <option value="off_brand">{t('reject.off_brand')}</option>
+                    <option value="other">{t('reject.other')}</option>
                   </select>
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 700, fontSize: '0.92rem' }}>
-                    Feedback Note <span style={{ opacity: 0.6, fontWeight: 400 }}>(teaches the agent)</span>
+                    {t('queue.modal.feedbackNote')} <span style={{ opacity: 0.6, fontWeight: 400 }}>{t('queue.modal.teachesAgent')}</span>
                   </label>
                   <textarea
                     rows={4}
                     required
                     value={rejectNote}
                     onChange={e => setRejectNote(e.target.value)}
-                    placeholder="Be specific: e.g. 'Jade is a luxury brand — never use casual language or exclamation points.'"
+                    placeholder={t('queue.modal.notePlaceholder')}
                   />
                 </div>
                 <div className="modal-actions">
                   <button type="button" className="btn btn-ghost" onClick={() => setIsRejecting(false)}>
-                    ← Back to Edit
+                    {t('queue.modal.back')}
                   </button>
-                  <button type="submit" className="btn btn-danger">Confirm Rejection</button>
+                  <button type="submit" className="btn btn-danger">{t('queue.modal.confirmReject')}</button>
                 </div>
               </form>
             )}
