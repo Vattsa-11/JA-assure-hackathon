@@ -32,9 +32,8 @@ export default function LanguageSwitcher() {
         aria-label={t('nav.language')}
         title={t('nav.language')}
       >
-        <span className="lang-globe" aria-hidden="true">🌐</span>
         <span className="lang-current-label">{current.label}</span>
-        <span className={`lang-chevron${open ? ' lang-chevron-open' : ''}`} aria-hidden="true">▾</span>
+        <span className={`lang-chevron${open ? ' lang-chevron-open' : ''}`} aria-hidden="true" />
       </button>
 
       {open && (
@@ -52,9 +51,8 @@ export default function LanguageSwitcher() {
                     setOpen(false);
                   }}
                 >
-                  <span className="lang-flag" aria-hidden="true">{meta.flag}</span>
                   <span className="lang-option-label">{meta.label}</span>
-                  {active && <span className="lang-check" aria-hidden="true">✓</span>}
+                  {active && <span className="lang-check" aria-hidden="true" />}
                 </button>
               </li>
             );

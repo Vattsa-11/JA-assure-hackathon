@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import T from '../../i18n/T';
+import Select from '../../components/Select';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -113,9 +114,13 @@ export default function LeadsPage() {
             <form onSubmit={handleGenerate} style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <div style={{ flex: '1 1 150px' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.4rem', fontWeight: 600 }}>{t('leads.brand')}</label>
-                <select value={brandId} onChange={e => setBrandId(e.target.value)} style={{ width: '100%', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', color: 'white', borderRadius: '8px', padding: '0.6rem' }}>
-                  {brands.map(b => <option key={b.id} value={b.id} style={{ color: '#000' }}>{b.name}</option>)}
-                </select>
+                <Select
+                  variant="dark"
+                  value={brandId}
+                  onChange={setBrandId}
+                  options={brands.map(b => ({ value: String(b.id), label: b.name }))}
+                  style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)' }}
+                />
               </div>
               <div style={{ flex: '1 1 200px' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.4rem', fontWeight: 600 }}>{t('leads.niche')}</label>
@@ -137,7 +142,6 @@ export default function LeadsPage() {
           <div style={{ textAlign: 'center', padding: '3rem', opacity: 0.5 }}>{t('leads.loading')}</div>
         ) : leads.length === 0 ? (
           <div className="ui-card" style={{ padding: '3rem', textAlign: 'center' }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🔍</div>
             <h3 style={{ margin: '0 0 0.5rem 0' }}>{t('leads.emptyTitle')}</h3>
             <p style={{ opacity: 0.6, margin: 0 }}>{t('leads.emptyDesc')}</p>
           </div>
@@ -163,12 +167,12 @@ export default function LeadsPage() {
                         </span>
                         {/* Platform tags */}
                         <span style={{ background: '#f1f5f9', color: '#475569', borderRadius: '6px', padding: '0.2rem 0.6rem', fontSize: '0.75rem' }}>
-                          📍 <T text={lead.region || lead.niche} />
+                          <T text={lead.region || lead.niche} />
                         </span>
                       </div>
                       {lead.website && (
                         <a href={lead.website} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.82rem', color: 'var(--primary)', textDecoration: 'none' }}>
-                          🔗 {lead.website}
+                          {lead.website}
                         </a>
                       )}
                       {lead.fit_reason && (
@@ -188,8 +192,7 @@ export default function LeadsPage() {
                       )}
                       {lead.draft_outreach && (
                         <button onClick={() => setExpandedLead(isExpanded ? null : lead.id)} className="btn btn-white" style={{ fontSize: '0.82rem', padding: '0.4rem 1rem' }}>
-                          {isExpanded ? t('leads.hideEmail') : t('leads.viewEmail')}
-                        </button>
+                          {isExpanded ? t('leads.hideEmail') : t('leads.viewEmail')}                        </button>
                       )}
                     </div>
                   </div>
@@ -197,14 +200,21 @@ export default function LeadsPage() {
                   {/* Expandable Outreach Email */}
                   {isExpanded && lead.draft_outreach && (
                     <div style={{ marginTop: '1.25rem', background: '#f8f9fc', borderRadius: '10px', padding: '1.25rem', borderLeft: '3px solid var(--primary)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', gap: '0.75rem', flexWrap: 'wrap' }}>
                         <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--primary)' }}>{t('leads.emailTitle')}</span>
-                        {lead.email && (
+                        {lead.email ? (
                           <a href={`mailto:${lead.email}?subject=Insurance%20for%20${encodeURIComponent(lead.business_name)}&body=${encodeURIComponent(lead.draft_outreach)}`}
                             className="btn btn-primary" style={{ fontSize: '0.8rem', padding: '0.3rem 0.8rem', textDecoration: 'none' }}>
                             {t('leads.sendTo', { email: lead.email })}
                           </a>
+                        ) : (
+                          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                            {t('leads.noEmail')}
+                          </span>
                         )}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                        <strong>{t('leads.recipient')}:</strong> {lead.email ?? lead.business_name}
                       </div>
                       <pre style={{ margin: 0, fontSize: '0.83rem', whiteSpace: 'pre-wrap', lineHeight: 1.7, fontFamily: 'inherit', color: '#374151' }}>
                         <T text={lead.draft_outreach} />

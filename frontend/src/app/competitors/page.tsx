@@ -207,7 +207,7 @@ export default function CompetitorsPage() {
               + {t('comp.addTracked')}
             </button>
             <button type="button" onClick={handleScan} disabled={scanning || tracked.length === 0} className="btn" style={{ background: 'white', color: 'var(--foreground)', height: '42px', padding: '0 1.25rem', flexShrink: 0, fontWeight: 700 }}>
-              {scanning ? t('comp.scanning') : `🔍 ${t('comp.scan')}`}
+              {scanning ? t('comp.scanning') : t('comp.scan')}
             </button>
           </form>
 
@@ -263,7 +263,7 @@ export default function CompetitorsPage() {
                   style={{ marginLeft: 'auto', background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '0.8rem' }}
                   title={t('comp.remove')}
                 >
-                  ✕ {t('comp.remove')}
+                  × {t('comp.remove')}
                 </button>
               </div>
             ))}
@@ -295,10 +295,9 @@ export default function CompetitorsPage() {
             const added = isTracked || addedUrls.has(r.url);
             return (
               <div key={r.url} className="ui-card" style={{ padding: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, color: 'var(--primary)', textDecoration: 'none' }}>
-                    🔗 {r.name} — <T text={r.url} />
-                  </a>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>                    <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, color: 'var(--primary)', textDecoration: 'none' }}>
+                      {r.name} — <T text={r.url} />
+                    </a>
                   <button
                     className="btn"
                     disabled={added}
@@ -313,7 +312,7 @@ export default function CompetitorsPage() {
                   </button>
                 </div>
                 <p style={{ margin: '0.75rem 0 0', fontSize: '0.92rem', lineHeight: 1.65 }}>
-                  💡 <T text={r.summary} />
+                  <T text={r.summary} />
                 </p>
               </div>
             );
@@ -344,7 +343,7 @@ export default function CompetitorsPage() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700 }}>{s.name}</div>
                     <a href={s.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.82rem', color: 'var(--primary)', textDecoration: 'none' }}>
-                      🔗 {s.url}
+                      {s.url}
                     </a>
                     <div style={{ fontSize: '0.82rem', opacity: 0.65, marginTop: '0.25rem' }}>{s.why}</div>
                   </div>
@@ -371,7 +370,6 @@ export default function CompetitorsPage() {
       <h2 style={{ margin: '0 0 1rem', fontSize: '1.3rem' }}>{t('comp.results')}</h2>
       {digests.length === 0 ? (
         <div className="ui-card" style={{ padding: '3rem', textAlign: 'center' }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>🕵️</div>
           <h3 style={{ margin: '0 0 0.5rem 0' }}>{t('comp.noneYet')}</h3>
         </div>
       ) : (
@@ -380,12 +378,12 @@ export default function CompetitorsPage() {
             <div key={c.id} className="ui-card" style={{ padding: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                 <a href={c.competitor_url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--primary)', textDecoration: 'none' }}>
-                  🔗 <T text={c.competitor_url} />
+                  <T text={c.competitor_url} />
                 </a>
                 <span style={{ fontSize: '0.75rem', opacity: 0.5 }}>{new Date(c.updated_at).toLocaleString()}</span>
               </div>
               <p style={{ margin: '0.75rem 0 0', fontSize: '0.92rem', lineHeight: 1.65 }}>
-                💡 <T text={c.suggested_action} />
+                <T text={c.suggested_action} />
               </p>
             </div>
           ))}

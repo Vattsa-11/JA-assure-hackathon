@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import T from '../../i18n/T';
+import Select from '../../components/Select';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -128,7 +129,6 @@ export default function QueuePage() {
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh' }}>
       <div style={{ textAlign: 'center', opacity: 0.7 }}>
-        <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
         <p>{t('queue.loading')}</p>
       </div>
     </div>
@@ -158,7 +158,6 @@ export default function QueuePage() {
 
       {assets.length === 0 ? (
         <div className="ui-card" style={{ padding: '4rem', textAlign: 'center' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
           <h3>{t('queue.emptyTitle')}</h3>
           <p style={{ opacity: 0.6, maxWidth: '400px', margin: '0 auto' }}>
             {t('queue.emptyDesc')}
@@ -215,7 +214,7 @@ export default function QueuePage() {
                   className="tag tag-gray"
                   style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '0.25rem 0.65rem', fontSize: '0.8rem' }}
                 >
-                  ✕
+                  ×
                 </button>
               </div>
             </div>
@@ -270,14 +269,18 @@ export default function QueuePage() {
                 </p>
                 <div style={{ marginBottom: '1.25rem' }}>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 700, fontSize: '0.92rem' }}>{t('queue.modal.reasonTag')}</label>
-                  <select value={rejectTag} onChange={e => setRejectTag(e.target.value)}>
-                    <option value="tone">{t('reject.tone')}</option>
-                    <option value="compliance">{t('reject.compliance')}</option>
-                    <option value="accuracy">{t('reject.accuracy')}</option>
-                    <option value="too_salesy">{t('reject.too_salesy')}</option>
-                    <option value="off_brand">{t('reject.off_brand')}</option>
-                    <option value="other">{t('reject.other')}</option>
-                  </select>
+                  <Select
+                    value={rejectTag}
+                    onChange={setRejectTag}
+                    options={[
+                      { value: 'tone', label: t('reject.tone') },
+                      { value: 'compliance', label: t('reject.compliance') },
+                      { value: 'accuracy', label: t('reject.accuracy') },
+                      { value: 'too_salesy', label: t('reject.too_salesy') },
+                      { value: 'off_brand', label: t('reject.off_brand') },
+                      { value: 'other', label: t('reject.other') },
+                    ]}
+                  />
                 </div>
                 <div>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 700, fontSize: '0.92rem' }}>
