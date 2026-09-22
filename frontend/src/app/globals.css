@@ -54,7 +54,7 @@ body {
 }
 
 .dark-card input, .dark-card select {
-  background: rgba(255, 255, 255, 0.1);
+  background: #000;
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
   border-radius: 8px;
@@ -67,6 +67,15 @@ body {
 }
 .dark-card input::placeholder {
   color: rgba(255, 255, 255, 0.5);
+}
+
+/* Keep black/white on focus — the global `select:focus` white rule must not win here */
+.dark-card input:focus,
+.dark-card select:focus {
+  background: #000;
+  border-color: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.12);
+  color: white;
 }
 
 .coral-card input:focus, .coral-card select:focus {
@@ -329,6 +338,93 @@ select {
   padding-top: 1.25rem;
   border-top: 1px solid #eef0f6;
 }
+
+/* ------------------------- */
+/* Language switcher widget  */
+/* ------------------------- */
+.lang-switcher {
+  position: relative;
+  margin-left: auto;
+}
+
+.lang-switcher-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 50px;
+  border: 1px solid var(--border);
+  background: white;
+  color: #475569;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.lang-switcher-btn:hover {
+  background: rgba(90, 82, 255, 0.07);
+  color: var(--primary);
+  border-color: rgba(90, 82, 255, 0.25);
+}
+
+.lang-globe { font-size: 1rem; line-height: 1; }
+
+.lang-chevron {
+  font-size: 0.7rem;
+  transition: transform 0.15s ease;
+}
+.lang-chevron-open { transform: rotate(180deg); }
+
+.lang-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.5rem);
+  min-width: 200px;
+  margin: 0;
+  padding: 0.4rem;
+  list-style: none;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 12px 35px rgba(15, 18, 30, 0.14);
+  z-index: 600;
+  animation: langMenuIn 0.15s ease-out;
+}
+
+@keyframes langMenuIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.lang-option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.lang-option:hover { background: rgba(90, 82, 255, 0.07); }
+
+.lang-option-active { background: rgba(90, 82, 255, 0.1); color: var(--primary); }
+
+.lang-flag { font-size: 1.05rem; line-height: 1; }
+
+.lang-option-label { flex: 1; }
+
+.lang-check { color: var(--primary); font-weight: 800; }
 
 /* ------------------- */
 /* Nav                 */

@@ -16,11 +16,13 @@ class LeadState(TypedDict):
     generated_lead_ids: list[int]
     passed_lead_ids: list[int]
     failed_lead_ids: list[int]
+    # Native language for drafted outreach ("en" default)
+    language: str
 
 def find_leads_node(state: LeadState):
     db = SessionLocal()
     try:
-        leads = find_leads(db, state["brand_id"], state["niche"], state["region"])
+        leads = find_leads(db, state["brand_id"], state["niche"], state["region"], state.get("language", "en"))
         lead_ids = [lead.id for lead in leads]
         return {"generated_lead_ids": lead_ids, "passed_lead_ids": [], "failed_lead_ids": []}
     finally:

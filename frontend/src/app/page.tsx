@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
+import { useLanguage } from '../i18n/LanguageContext';
+import T from '../i18n/T';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -11,6 +13,7 @@ const PLATFORM_LIMITS: Record<string, number> = {
 };
 
 export default function UnifiedDashboard() {
+  const { t, language } = useLanguage();
   const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
   const [stats, setStats] = useState({ pending: 0, approved: 0, rejected: 0, videos: 0 });
   const [feed, setFeed] = useState<any[]>([]);
@@ -69,14 +72,14 @@ export default function UnifiedDashboard() {
       await fetch(`${API_URL}/pipeline/content/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ brand_id: parseInt(selectedBrand), topic })
+        body: JSON.stringify({ brand_id: parseInt(selectedBrand), topic, language })
       });
 
       if (generateVideo) {
         await fetch(`${API_URL}/pipeline/video/run`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ brand_id: parseInt(selectedBrand), topic })
+          body: JSON.stringify({ brand_id: parseInt(selectedBrand), topic, language })
         });
       }
       
@@ -164,9 +167,9 @@ export default function UnifiedDashboard() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
           <div>
             <h1 style={{ margin: '0 0 0.5rem 0', fontSize: '2rem', fontWeight: 800, color: 'var(--foreground)' }}>
-              Welcome back, Judge 👋
+              {t('dash.welcome')}
             </h1>
-            <p style={{ margin: 0, opacity: 0.6, fontSize: '1.1rem' }}>Let&apos;s review today&apos;s marketing assets.</p>
+            <p style={{ margin: 0, opacity: 0.6, fontSize: '1.1rem' }}>{t('dash.subtitle')}</p>
           </div>
         </div>
 
@@ -176,12 +179,12 @@ export default function UnifiedDashboard() {
           <div style={{ position: 'absolute', right: '10%', bottom: '-20%', width: '150px', height: '150px', background: 'rgba(255,255,255,0.05)', borderRadius: '50%' }}></div>
           
           <div style={{ position: 'relative', zIndex: 1 }}>
-            <h2 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '1.8rem' }}>Step 1: Start Campaign</h2>
-            <p style={{ opacity: 0.7, marginBottom: '2rem' }}>Enter a topic and watch the AI agents generate drafts, check compliance, and queue them for review.</p>
+            <h2 style={{ marginTop: 0, marginBottom: '0.5rem', fontSize: '1.8rem' }}>{t('dash.step1.title')}</h2>
+            <p style={{ opacity: 0.7, marginBottom: '2rem' }}>{t('dash.step1.desc')}</p>
             
             <form onSubmit={handleGenerate} style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-end', flexWrap: 'wrap' }}>
               <div style={{ flex: '1 1 200px' }}>
-                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: 600 }}>1. Select Brand</label>
+                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: 600 }}>{t('dash.selectBrand')}</label>
                 <select value={selectedBrand} onChange={e => setSelectedBrand(e.target.value)} required>
                   {brands.map(b => (
                     <option key={b.id} value={b.id}>{b.name}</option>
@@ -189,17 +192,17 @@ export default function UnifiedDashboard() {
                 </select>
               </div>
               <div style={{ flex: '2 1 300px' }}>
-                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: 600 }}>2. Topic / Brief</label>
-                <input type="text" placeholder="e.g. Write about jewellery theft insurance..." value={topic} onChange={e => setTopic(e.target.value)} required />
+                <label style={{ display: 'block', fontSize: '0.9rem', marginBottom: '0.5rem', fontWeight: 600 }}>{t('dash.topic')}</label>
+                <input type="text" placeholder={t('dash.topicPlaceholder')} value={topic} onChange={e => setTopic(e.target.value)} required style={{ background: 'black', color: 'white' }} />
               </div>
               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', height: '45px', paddingBottom: '0.5rem' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>
                   <input type="checkbox" checked={generateVideo} onChange={e => setGenerateVideo(e.target.checked)} style={{ width: 'auto' }} />
-                  Include Video
+                  {t('dash.includeVideo')}
                 </label>
               </div>
               <button type="submit" className="btn" disabled={isGenerating} style={{ background: 'white', color: 'var(--foreground)', height: '48px', padding: '0 2rem', fontWeight: 700 }}>
-                {isGenerating ? 'Generating...' : 'Go Premium (Run Pipeline)'}
+                {isGenerating ? t('dash.generating') : t('dash.runPipeline')}
               </button>
             </form>
           </div>
@@ -207,64 +210,64 @@ export default function UnifiedDashboard() {
 
         {/* STEPS 2, 3, 6, 7: Pipeline Stats (White Cards) */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Pipeline Status</h2>
+          <h2 style={{ margin: 0, fontSize: '1.5rem' }}>{t('dash.pipelineStatus')}</h2>
         </div>
         
         <div className="grid" style={{ marginBottom: '3rem', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' }}>
           <div className="ui-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'var(--pastel-yellow)', border: 'none' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
-                Pending Review
+                {t('dash.pendingReview')}
               </div>
               <span style={{ color: 'rgba(0,0,0,0.4)', fontSize: '0.75rem', fontWeight: 700 }}>Step 4 & 5</span>
             </div>
             <div style={{ fontSize: '2.5rem', fontWeight: 800 }}>{stats.pending}</div>
-            <div style={{ fontSize: '0.85rem', opacity: 0.6 }}>Clean drafts awaiting human decision.</div>
+            <div style={{ fontSize: '0.85rem', opacity: 0.6 }}>{t('dash.pendingHint')}</div>
           </div>
 
           <div className="ui-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'var(--pastel-blue)', border: 'none' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
-                Rejected / Blocked
+                {t('dash.rejectedBlocked')}
               </div>
               <span style={{ color: 'rgba(0,0,0,0.4)', fontSize: '0.75rem', fontWeight: 700 }}>Step 3</span>
             </div>
             <div style={{ fontSize: '2.5rem', fontWeight: 800 }}>{stats.rejected}</div>
-            <div style={{ fontSize: '0.85rem', opacity: 0.6 }}>Caught by Compliance Inspector.</div>
+            <div style={{ fontSize: '0.85rem', opacity: 0.6 }}>{t('dash.rejectedHint')}</div>
           </div>
 
           <div className="ui-card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'var(--pastel-green)', border: 'none' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
-                Active Lessons
+                {t('dash.activeLessons')}
               </div>
               <span style={{ color: 'rgba(0,0,0,0.4)', fontSize: '0.75rem', fontWeight: 700 }}>Step 6 & 7</span>
             </div>
-            <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--foreground)' }}>Auto-Applied</div>
-            <div style={{ fontSize: '0.85rem', opacity: 0.6 }}>AI avoids past mistakes on next run.</div>
+            <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--foreground)' }}>{t('dash.lessonsAuto')}</div>
+            <div style={{ fontSize: '0.85rem', opacity: 0.6 }}>{t('dash.lessonsHint')}</div>
           </div>
         </div>
 
         {/* STEP 4 & 5: Inbox (Feed) */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Inbox <span style={{ background: 'var(--foreground)', color: 'white', fontSize: '0.9rem', padding: '0.2rem 0.6rem', borderRadius: '50px', marginLeft: '0.5rem' }}>{stats.pending}</span></h2>
+          <h2 style={{ margin: 0, fontSize: '1.5rem' }}>{t('dash.inbox')} <span style={{ background: 'var(--foreground)', color: 'white', fontSize: '0.9rem', padding: '0.2rem 0.6rem', borderRadius: '50px', marginLeft: '0.5rem' }}>{stats.pending}</span></h2>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button className="btn" onClick={() => setFilter('ALL')} style={{ boxShadow: 'none', background: filter === 'ALL' ? 'var(--foreground)' : 'white', color: filter === 'ALL' ? 'white' : 'var(--foreground)', border: '1px solid var(--border)' }}>All Drafts</button>
-            <button className="btn" onClick={() => setFilter('BLOCKED')} style={{ boxShadow: 'none', background: filter === 'BLOCKED' ? '#ef4444' : 'white', color: filter === 'BLOCKED' ? 'white' : 'var(--foreground)', border: '1px solid var(--border)' }}>Blocked by Inspector</button>
+            <button className="btn" onClick={() => setFilter('ALL')} style={{ boxShadow: 'none', background: filter === 'ALL' ? 'var(--foreground)' : 'white', color: filter === 'ALL' ? 'white' : 'var(--foreground)', border: '1px solid var(--border)' }}>{t('dash.allDrafts')}</button>
+            <button className="btn" onClick={() => setFilter('BLOCKED')} style={{ boxShadow: 'none', background: filter === 'BLOCKED' ? '#ef4444' : 'white', color: filter === 'BLOCKED' ? 'white' : 'var(--foreground)', border: '1px solid var(--border)' }}>{t('dash.blockedByInspector')}</button>
           </div>
         </div>
 
         <div className="ui-card" style={{ padding: '1rem', background: 'white' }}>
           {Object.entries(filteredFeed.reduce((acc: Record<string, unknown[]>, item: any) => {
-            const t = (item.topic as string) || "Legacy / Unknown Topic";
-            if (!acc[t]) acc[t] = [];
-            acc[t].push(item);
+            const topicKey = (item.topic as string) || "Legacy / Unknown Topic";
+            if (!acc[topicKey]) acc[topicKey] = [];
+            acc[topicKey].push(item);
             return acc;
-          }, {})).map(([t, items]: [string, any[]], index) => (
-            <details key={t} style={{ borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '1rem' }} open={index === 0}>
+          }, {})).map(([topicKey, items]: [string, any[]], index) => (
+            <details key={topicKey} style={{ borderBottom: '1px solid var(--border)', paddingBottom: '1rem', marginBottom: '1rem' }} open={index === 0}>
               <summary style={{ cursor: 'pointer', fontSize: '1.1rem', fontWeight: 700, padding: '1rem', background: 'var(--background)', borderRadius: '12px', display: 'flex', justifyContent: 'space-between' }}>
-                <span>{t}</span>
-                <span className="tag" style={{ background: 'var(--pastel-blue)', color: 'var(--foreground)' }}>{items.length} Drafts</span>
+                <span><T text={topicKey} /></span>
+                <span className="tag" style={{ background: 'var(--pastel-blue)', color: 'var(--foreground)' }}>{items.length} {t('dash.drafts')}</span>
               </summary>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem', padding: '0 1rem' }}>
@@ -294,20 +297,20 @@ export default function UnifiedDashboard() {
                         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.25rem', alignItems: 'center' }}>
                           <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--foreground)' }}>{(item.brand_name || item.business_name) as string}</span>
                           {displayPlatform && <span className="tag" style={{ fontSize: '0.65rem', background: 'var(--pastel-blue)', color: 'var(--foreground)' }}>{(displayPlatform as string).toUpperCase()}</span>}
-                          {isBlocked && <span className="tag tag-danger" style={{ fontSize: '0.65rem' }}>Inspector Blocked</span>}
-                          {isRejected && <span className="tag tag-danger" style={{ fontSize: '0.65rem' }}>Rejected</span>}
-                          {isPending && <span className="tag" style={{ fontSize: '0.65rem', background: 'var(--pastel-yellow)', color: '#b45309' }}>Requires Human</span>}
+                          {isBlocked && <span className="tag tag-danger" style={{ fontSize: '0.65rem' }}>{t('dash.inspectorBlocked')}</span>}
+                          {isRejected && <span className="tag tag-danger" style={{ fontSize: '0.65rem' }}>{t('dash.rejected')}</span>}
+                          {isPending && <span className="tag" style={{ fontSize: '0.65rem', background: 'var(--pastel-yellow)', color: '#b45309' }}>{t('dash.requiresHuman')}</span>}
                         </div>
                         <div style={{ fontSize: '0.9rem', color: '#636e72', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {item.type === 'TEXT' && (item.content_text as string)?.replace(/\n/g, ' ')}
-                          {item.type === 'LEAD' && item.draft_outreach as string}
+                          {item.type === 'TEXT' && <T text={(item.content_text as string)?.replace(/\n/g, ' ')} />}
+                          {item.type === 'LEAD' && <T text={item.draft_outreach as string} />}
                           {item.type === 'VIDEO' && "Video script generated"}
                         </div>
                         
                         {/* Lessons Visual cue */}
                         {Array.isArray(item.lessons) && item.lessons.length > 0 && (
                           <div style={{ fontSize: '0.75rem', color: 'var(--foreground)', marginTop: '0.25rem', fontWeight: 600, opacity: 0.7 }}>
-                            ✨ Generated using {item.lessons.length} learned lessons
+                            ✨ {t('dash.lessonsUsed', { n: item.lessons.length })}
                           </div>
                         )}
                       </div>
@@ -315,7 +318,7 @@ export default function UnifiedDashboard() {
                       {/* Action */}
                       {(isPending || isBlocked) && (
                         <button className="btn" style={{ background: 'var(--foreground)', color: 'white', fontSize: '0.8rem', padding: '0.5rem 1rem' }} onClick={() => openModal(item)}>
-                          Review
+                          {t('dash.review')}
                         </button>
                       )}
                     </div>
@@ -325,7 +328,7 @@ export default function UnifiedDashboard() {
             </details>
           ))}
           {feed.length === 0 && !loading && (
-            <div style={{ padding: '3rem', textAlign: 'center', opacity: 0.5 }}>No drafts generated yet. Start a campaign above!</div>
+            <div style={{ padding: '3rem', textAlign: 'center', opacity: 0.5 }}>{t('dash.emptyFeed')}</div>
           )}
         </div>
       </div>
@@ -335,7 +338,7 @@ export default function UnifiedDashboard() {
         <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
           <div className="modal-content">
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', alignItems: 'center' }}>
-              <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Step 5: Human Decision</h2>
+              <h2 style={{ margin: 0, fontSize: '1.5rem' }}>{t('dash.modal.title')}</h2>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <span className="tag tag-primary">{viewingItem.type}</span>
               </div>
@@ -345,7 +348,7 @@ export default function UnifiedDashboard() {
               <>
                 <div style={{ marginBottom: '1.5rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                    <label style={{ fontWeight: 600 }}>Draft Content</label>
+                    <label style={{ fontWeight: 600 }}>{t('dash.modal.draftContent')}</label>
                     {viewingItem.platform && (
                       <span style={{ 
                         fontSize: '0.8rem', 
@@ -369,19 +372,19 @@ export default function UnifiedDashboard() {
                 
                 <div style={{ display: 'flex', gap: '1rem', justifyContent: 'space-between' }}>
                   <button type="button" className="btn btn-danger" onClick={() => setIsRejecting(true)}>
-                    Reject & Teach (Step 6)
+                    {t('dash.modal.rejectTeach')}
                   </button>
                   <div style={{ display: 'flex', gap: '1rem' }}>
                     <button type="button" className="btn" onClick={closeModal} style={{ background: 'white', color: 'var(--foreground)', border: '1px solid var(--border)' }}>
-                      Cancel
+                      {t('dash.modal.cancel')}
                     </button>
                     {editText !== (viewingItem.content_text || viewingItem.draft_outreach) ? (
                       <button type="button" className="btn btn-primary" onClick={handleSaveEdit}>
-                        Save & Approve
+                        {t('dash.modal.saveApprove')}
                       </button>
                     ) : (
                       <button type="button" className="btn btn-success" onClick={() => handleApprove(viewingItem.id as number)}>
-                        Approve As-Is
+                        {t('dash.modal.approveAsIs')}
                       </button>
                     )}
                   </div>
@@ -389,38 +392,38 @@ export default function UnifiedDashboard() {
               </>
             ) : (
               <form onSubmit={handleReject}>
-                <h3 style={{ marginBottom: '1rem', color: 'var(--danger)' }}>Step 6: Teach the AI</h3>
-                <p style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: '1.5rem' }}>Your rejection reason is saved as a lesson. The AI reads this next time it generates a draft (Step 7) to avoid making the same mistake twice.</p>
+                <h3 style={{ marginBottom: '1rem', color: 'var(--danger)' }}>{t('dash.modal.teachTitle')}</h3>
+                <p style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: '1.5rem' }}>{t('dash.modal.teachDesc')}</p>
                 
                 <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Reason Tag</label>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>{t('dash.modal.reasonTag')}</label>
                   <select value={rejectTag} onChange={e => setRejectTag(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '12px', border: '1px solid var(--border)', fontFamily: 'inherit' }}>
-                    <option value="tone">Tone / Voice mismatch</option>
-                    <option value="compliance">Compliance issue</option>
-                    <option value="accuracy">Factually incorrect</option>
-                    <option value="too_salesy">Too sales-y / pushy</option>
-                    <option value="off_brand">Off-brand messaging</option>
-                    <option value="other">Other</option>
+                    <option value="tone">{t('reject.tone')}</option>
+                    <option value="compliance">{t('reject.compliance')}</option>
+                    <option value="accuracy">{t('reject.accuracy')}</option>
+                    <option value="too_salesy">{t('reject.too_salesy')}</option>
+                    <option value="off_brand">{t('reject.off_brand')}</option>
+                    <option value="other">{t('reject.other')}</option>
                   </select>
                 </div>
                 <div style={{ marginBottom: '1.5rem' }}>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
-                    Feedback Note (The Lesson)
+                    {t('dash.modal.feedbackNote')}
                   </label>
                   <textarea
                     rows={4}
                     required
                     value={rejectNote}
                     onChange={e => setRejectNote(e.target.value)}
-                    placeholder="e.g. 'Jade is a luxury brand — never use casual language or exclamation points.'"
+                    placeholder={t('dash.modal.notePlaceholder')}
                     style={{ width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid var(--border)', fontFamily: 'inherit', outline: 'none' }}
                   />
                 </div>
                 <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                    <button type="button" className="btn" onClick={() => setIsRejecting(false)} style={{ background: 'white', color: 'var(--foreground)', border: '1px solid var(--border)' }}>
-                    Back
+                    {t('dash.modal.back')}
                   </button>
-                  <button type="submit" className="btn btn-danger">Confirm Rejection</button>
+                  <button type="submit" className="btn btn-danger">{t('dash.modal.confirmReject')}</button>
                 </div>
               </form>
             )}

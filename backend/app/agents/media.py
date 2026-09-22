@@ -9,17 +9,26 @@ from app.models.content import ContentAsset, ContentStatus, ContentVersion
 from app.models.media import VideoAsset
 from app.services.llm_client import llm_client
 from app.services.tts_video_client import tts_video_client
+from app.services.translation_service import TARGET_LANGUAGES
 
 logger = logging.getLogger(__name__)
 
-def generate_video_script_and_render(db: Session, brand_id: int, topic: str) -> VideoAsset:
+def generate_video_script_and_render(db: Session, brand_id: int, topic: str, language: str = "en") -> VideoAsset:
     brand = db.query(Brand).filter(Brand.id == brand_id).first()
     if not brand:
         raise ValueError(f"Brand {brand_id} not found")
 
+    language_instruction = ""
+    if language != "en" and language in TARGET_LANGUAGES:
+        language_full = TARGET_LANGUAGES[language]
+        language_instruction = (
+            f"\nLANGUAGE REQUIREMENT: Write the script natively in {language_full} — not "
+            f"translated English. Adapt tone and cultural context for a native {language_full} speaker.\n"
+        )
+
     system_prompt = f"""You are an expert TikTok/Reels scriptwriter for '{brand.name}'.
 Brand Voice: {brand.voice_description}
-
+{language_instruction}
 Write a short, engaging 30-second voiceover script about: {topic}.
 Return ONLY the exact spoken words — no stage directions, no scene labels, no emojis, no formatting. Just the narration text.
 """
@@ -34,7 +43,7 @@ Return ONLY the exact spoken words — no stage directions, no scene labels, no 
     asset = ContentAsset(
         brand_id=brand_id,
         platform="tiktok_reels",
-        language="en",
+        language=language if (language in TARGET_LANGUAGES) else "en",
         topic=topic,
         status=ContentStatus.draft
     )

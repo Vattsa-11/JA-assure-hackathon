@@ -44,6 +44,128 @@ def get_brands(db: Session = Depends(get_db)):
     brands = db.query(Brand).all()
     return [{"id": b.id, "name": b.name} for b in brands]
 
+@router.get("/competitors")
+def get_competitor_digests(db: Session = Depends(get_db)):
+    """Latest competitor-intelligence digest per tracked URL."""
+    from app.models.research import CompetitorDigestEntry
+
+    entries = (
+        db.query(CompetitorDigestEntry)
+        .order_by(CompetitorDigestEntry.updated_at.desc())
+        .all()
+    )
+    seen: set[str] = set()
+    result = []
+    for entry in entries:
+        if entry.competitor_url in seen:
+            continue  # keep only the newest entry per URL
+        seen.add(entry.competitor_url)
+        result.append({
+            "id": entry.id,
+            "competitor_url": entry.competitor_url,
+            "suggested_action": entry.suggested_action,
+            "updated_at": entry.updated_at.isoformat(),
+        })
+    return result
+
+
+@router.get("/competitors/tracked")
+def list_tracked_competitors(db: Session = Depends(get_db)):
+    """The automated watchlist."""
+    from app.models.research import TrackedCompetitor
+
+    tracked = db.query(TrackedCompetitor).order_by(TrackedCompetitor.created_at.asc()).all()
+    return [{
+        "id": t.id,
+        "competitor_url": t.competitor_url,
+        "name": t.name,
+        "source": t.source,       # manual | major | ai
+        "status": t.status,       # active | unreachable
+        "created_at": t.created_at.isoformat(),
+    } for t in tracked]
+
+
+@router.post("/competitors/tracked")
+def add_tracked_competitor(payload: dict, db: Session = Depends(get_db)):
+    """Add one URL to the automated watchlist (idempotent)."""
+    from app.models.research import TrackedCompetitor
+
+    url = str(payload.get("url", "")).strip()
+    if not url:
+        return {"error": "url is required"}, 400
+    if not url.startswith("http"):
+        url = f"https://{url}"
+
+    existing = db.query(TrackedCompetitor).filter(
+        TrackedCompetitor.competitor_url == url
+    ).first()
+    if existing:
+        return {"id": existing.id, "competitor_url": existing.competitor_url,
+                "name": existing.name, "source": existing.source,
+                "status": existing.status, "already": True}
+
+    tracked = TrackedCompetitor(
+        competitor_url=url,
+        name=str(payload.get("name") or "")[:80] or None,
+        source=str(payload.get("source") or "manual")[:16],
+    )
+    db.add(tracked)
+    db.commit()
+    db.refresh(tracked)
+    return {"id": tracked.id, "competitor_url": tracked.competitor_url,
+            "name": tracked.name, "source": tracked.source,
+            "status": tracked.status, "already": False}
+
+
+@router.delete("/competitors/tracked/{tracked_id}")
+def remove_tracked_competitor(tracked_id: int, db: Session = Depends(get_db)):
+    from app.models.research import TrackedCompetitor
+
+    tracked = db.query(TrackedCompetitor).filter(TrackedCompetitor.id == tracked_id).first()
+    if not tracked:
+        return {"error": "not found"}, 404
+    db.delete(tracked)
+    db.commit()
+    return {"removed": tracked.competitor_url}
+
+
+@router.post("/competitors/scan")
+def scan_competitors(payload: dict, db: Session = Depends(get_db)):
+    """SYNCHRONOUS scan of the given URLs (or the whole watchlist when omitted).
+
+    Returns the real per-URL report so the UI always shows what happened —
+    digested / unchanged / unreachable — instead of guessing client-side.
+    """
+    from app.agents.research import scan_tracked_competitors
+
+    urls = payload.get("urls") or None
+    if urls is not None and not isinstance(urls, list):
+        return {"error": "urls must be a list"}, 400
+    try:
+        return scan_tracked_competitors(db, urls=urls)
+    except Exception as e:  # noqa: BLE001 - report failure instead of hanging the UI
+        return {"scanned_at": None, "results": [], "error": str(e)}
+
+
+@router.post("/competitors/discover")
+def discover_competitors(db: Session = Depends(get_db)):
+    """Ask the LLM to suggest real competitor websites for JA Assure
+    (insurance for jewellers, clinics, transit/logistics businesses).
+    Only returns suggestions; nothing is stored or scraped here — the user
+    picks which ones to track, then runs a scan."""
+    from app.agents.research import discover_competitors as _discover
+
+    return {"competitors": _discover()}
+
+
+@router.post("/competitors/research-new")
+def research_new_competitors_endpoint(db: Session = Depends(get_db)):
+    """Search the market for NEW competitors we don't track yet, scrape each
+    candidate, and return a full intelligence digest for the promising ones."""
+    from app.agents.research import research_new_competitors as _research
+
+    return _research(db)
+
 @router.get("/feed")
 def get_feed(db: Session = Depends(get_db)):
     feed = []

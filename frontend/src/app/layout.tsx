@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Navbar from '../components/Navbar'
+import { LanguageProvider } from '../i18n/LanguageContext'
 import { Inter } from 'next/font/google'
 import './globals.css'
 
@@ -18,8 +19,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className} style={{ margin: 0, background: 'var(--background)' }}>
-        <Navbar />
-        {children}
+        <LanguageProvider>
+          <Navbar />
+          {children}
+        </LanguageProvider>
       </body>
     </html>
   )
