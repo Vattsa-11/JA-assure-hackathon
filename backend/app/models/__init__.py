@@ -8,7 +8,7 @@ from app.models.content import (
     Feedback,
 )
 from app.models.lead import Lead, LeadStatus
-from app.models.media import VideoAsset
+from app.models.media import ImageAsset, VideoAsset
 from app.models.research import CompetitorDigestEntry, TrackedCompetitor
 from app.models.translation import TranslationCache
 
@@ -21,8 +21,10 @@ __all__ = [
     "ContentStatus",
     "ContentVersion",
     "Feedback",
+    "ImageAsset",
     "Lead",
     "LeadStatus",
+    "TrackedCompetitor",
     "TranslationCache",
     "VideoAsset"
 ]

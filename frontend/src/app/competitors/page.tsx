@@ -13,6 +13,26 @@ type ResearchResult = {
   errors: { url: string; note: string }[];
 };
 
+// --- Staged research flow types (NDJSON events from /competitors/research-stream) ---
+type FlowEvent = {
+  stage: 'discover' | 'verify' | 'analyze' | 'results' | 'error';
+  status: 'start' | 'progress' | 'done' | 'failed';
+  url?: string;
+  index?: number;
+  total?: number;
+  result?: 'ok' | 'parked' | 'unreachable';
+  note?: string;
+  found?: number;
+  verified?: number;
+  researched?: number;
+  errors?: number;
+  candidates?: Suggestion[];
+};
+type StageKey = 'discover' | 'verify' | 'analyze' | 'results';
+type StageState = { status: 'pending' | 'active' | 'done'; total?: number; done?: number };
+
+type VerifyRow = { url: string; result: 'ok' | 'parked' | 'unreachable'; note?: string };
+
 export default function CompetitorsPage() {
   const { t } = useLanguage();
   const [digests, setDigests] = useState<Digest[]>([]);
@@ -22,12 +42,19 @@ export default function CompetitorsPage() {
   const [scanReport, setScanReport] = useState<ScanResult[] | null>(null);
   const [adding, setAdding] = useState(false);
 
-  const [suggestions, setSuggestions] = useState<Suggestion[] | null>(null);
-  const [discovering, setDiscovering] = useState(false);
   const [addedUrls, setAddedUrls] = useState<Set<string>>(new Set());
+  const [suggestions, setSuggestions] = useState<Suggestion[] | null>(null);
 
-  const [research, setResearch] = useState<ResearchResult | null>(null);
-  const [researching, setResearching] = useState(false);
+  // --- Merged staged research flow state ---
+  const [flowRunning, setFlowRunning] = useState(false);
+  const [stages, setStages] = useState<Record<StageKey, StageState>>({
+    discover: { status: 'pending' },
+    verify: { status: 'pending' },
+    analyze: { status: 'pending' },
+    results: { status: 'pending' },
+  });
+  const [verifyRows, setVerifyRows] = useState<VerifyRow[]>([]);
+  const [flowNote, setFlowNote] = useState<string | null>(null);
 
   const fetchDigests = useCallback(async () => {
     try {
@@ -102,36 +129,95 @@ export default function CompetitorsPage() {
     }
   };
 
-  const handleDiscover = async () => {
-    setDiscovering(true);
-    setSuggestions(null);
-    try {
-      const res = await fetch(`${API_URL}/dashboard/competitors/discover`, { method: 'POST' });
-      if (res.ok) {
-        const data = await res.json();
-        setSuggestions(data.competitors ?? []);
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setDiscovering(false);
-    }
+  const [research, setResearch] = useState<ResearchResult | null>(null);
+
+  const resetFlow = () => {
+    setStages({
+      discover: { status: 'pending' },
+      verify: { status: 'pending' },
+      analyze: { status: 'pending' },
+      results: { status: 'pending' },
+    });
+    setVerifyRows([]);
+    setFlowNote(null);
   };
 
-  const handleResearch = async () => {
-    setResearching(true);
-    setResearch(null);
+  // Merged one-click flow: discover -> verify -> analyze -> results,
+  // consuming NDJSON progress events from the backend.
+  const handleResearchFlow = async () => {
+    setFlowRunning(true);
+    resetFlow();
     try {
-      const res = await fetch(`${API_URL}/dashboard/competitors/research-new`, { method: 'POST' });
-      if (res.ok) {
-        const data = await res.json();
-        setResearch({ researched: data.researched ?? [], errors: data.errors ?? [] });
-        await fetchDigests();
+      const res = await fetch(`${API_URL}/dashboard/competitors/research-stream`, { method: 'POST' });
+      if (!res.ok || !res.body) throw new Error(`Stream failed: ${res.status}`);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      const handleEvent = (ev: FlowEvent) => {
+        if (ev.stage === 'error') {
+          setFlowNote(ev.note || 'Research flow failed.');
+          return;
+        }
+        setStages((prev) => {
+          const next = { ...prev };
+          if (ev.stage === 'results') {
+            next.results = { status: 'done' };
+            return next;
+          }
+          const st = ev.stage as StageKey;
+          if (ev.status === 'start') next[st] = { status: 'active', total: ev.total, done: 0 };
+          if (ev.status === 'progress') {
+            const cur = next[st];
+            next[st] = { ...cur, status: 'active', done: ev.index ?? (cur.done ?? 0) + 1, total: ev.total ?? cur.total };
+          }
+          if (ev.status === 'done') next[st] = { status: 'done', total: ev.total ?? ev.found ?? ev.verified ?? ev.researched, done: ev.found ?? ev.verified ?? ev.researched };
+          // When a stage finishes, advance the following stage to active
+          if (ev.status === 'done') {
+            const order: StageKey[] = ['discover', 'verify', 'analyze', 'results'];
+            const idx = order.indexOf(st);
+            if (idx >= 0 && idx < order.length - 1 && next[order[idx + 1]].status === 'pending') {
+              next[order[idx + 1]] = { status: 'active' };
+            }
+          }
+          return next;
+        });
+
+        if (ev.stage === 'discover' && ev.status === 'done') {
+          setSuggestions(ev.candidates ?? []);
+        }
+        if (ev.stage === 'verify' && ev.status === 'progress' && ev.url) {
+          setVerifyRows((prev) => [...prev, { url: ev.url!, result: ev.result ?? 'ok', note: ev.note }]);
+        }
+        if (ev.stage === 'results' && ev.status === 'done') {
+          setSuggestions(null);
+          setResearch({ researched: (ev.researched ?? []) as ResearchResult['researched'], errors: (ev.errors ?? []) as ResearchResult['errors'] });
+          setFlowNote(null);
+          fetchDigests();
+        }
+      };
+
+      // Read the NDJSON stream line by line
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try { handleEvent(JSON.parse(line) as FlowEvent); } catch { /* skip malformed line */ }
+        }
+      }
+      if (buffer.trim()) {
+        try { handleEvent(JSON.parse(buffer) as FlowEvent); } catch { /* skip */ }
       }
     } catch (e) {
       console.error(e);
+      setFlowNote(e instanceof Error ? e.message : 'Research flow failed.');
     } finally {
-      setResearching(false);
+      setFlowRunning(false);
     }
   };
 
@@ -161,6 +247,13 @@ export default function CompetitorsPage() {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const STAGE_ORDER: StageKey[] = ['discover', 'verify', 'analyze', 'results'];
+  const stageLabel = (s: StageKey) => {
+    const n = stages[s];
+    const count = n.total != null && n.done != null && n.total > 0 ? ` (${n.done}/${n.total})` : '';
+    return `${t(`comp.stage.${s}` as any)}${count}`;
   };
 
   const sourceLabel = (source: string) =>
@@ -271,21 +364,75 @@ export default function CompetitorsPage() {
         </div>
       </div>
 
-      {/* AI research tools */}
+      {/* AI research tools — one merged flow */}
       <div className="page-header" style={{ marginBottom: '1rem' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: '1.3rem' }}>{t('comp.researchResults')}</h2>
           <p className="page-subtitle" style={{ fontSize: '0.88rem' }}>{t('comp.researchDesc')}</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <button className="btn btn-primary" onClick={handleResearch} disabled={researching}>
-            {researching ? t('comp.researching') : t('comp.research')}
-          </button>
-          <button className="btn" onClick={handleDiscover} disabled={discovering} style={{ background: 'var(--foreground)', color: 'white' }}>
-            {discovering ? t('comp.discovering') : t('comp.discover')}
+          <button className="btn btn-primary" onClick={handleResearchFlow} disabled={flowRunning}>
+            {flowRunning ? t('comp.researching') : t('comp.research')}
           </button>
         </div>
       </div>
+
+      {/* Stage stepper — live progress while the flow runs */}
+      {(flowRunning || stages.results.status === 'done') && (
+        <div className="ui-card" style={{ padding: '1.25rem 1.5rem', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+            {STAGE_ORDER.map((s, i) => {
+              const st = stages[s];
+              const dot =
+                st.status === 'done' ? '✓' :
+                st.status === 'active' ? '●' : '○';
+              const color =
+                st.status === 'done' ? '#10b981' :
+                st.status === 'active' ? 'var(--primary)' : 'var(--text-muted)';
+              return (
+                <span key={s} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <span style={{ color, fontWeight: 700, fontSize: '0.95rem' }}>{dot}</span>
+                  <span style={{
+                    fontSize: '0.85rem',
+                    fontWeight: st.status === 'active' ? 700 : 500,
+                    color: st.status === 'pending' ? 'var(--text-muted)' : 'var(--foreground)',
+                    opacity: st.status === 'pending' ? 0.55 : 1,
+                  }}>
+                    {stageLabel(s)}
+                  </span>
+                  {i < STAGE_ORDER.length - 1 && (
+                    <span style={{ color: 'var(--text-muted)', opacity: 0.5, margin: '0 0.35rem' }}>→</span>
+                  )}
+                </span>
+              );
+            })}
+          </div>
+
+          {flowNote && (
+            <div style={{ marginTop: '0.75rem', fontSize: '0.85rem', color: '#991b1b', background: '#fee2e2', border: '1px solid #ef4444', borderRadius: '8px', padding: '0.5rem 0.9rem' }}>
+              {flowNote}
+            </div>
+          )}
+
+          {verifyRows.length > 0 && (
+            <div style={{ marginTop: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+              {verifyRows.map((row, i) => (
+                <div key={`${row.url}-${i}`} style={{ display: 'flex', gap: '0.6rem', alignItems: 'baseline', fontSize: '0.8rem', flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 600 }}>{row.url}</span>
+                  <span style={{
+                    padding: '0.1rem 0.55rem', borderRadius: '50px', fontSize: '0.68rem', fontWeight: 700,
+                    background: row.result === 'ok' ? '#d1fae5' : row.result === 'parked' ? '#fef3c7' : '#fee2e2',
+                    color: row.result === 'ok' ? '#065f46' : row.result === 'parked' ? '#92400e' : '#991b1b',
+                  }}>
+                    {t(`comp.verify.${row.result}` as any)}
+                  </span>
+                  {row.note && <span style={{ opacity: 0.6 }}>{row.note}</span>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* New-competitor research results */}
       {research && research.researched.length > 0 && (

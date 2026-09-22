@@ -8,12 +8,12 @@ from app.models.brand import Brand
 from app.models.content import ContentAsset, ContentStatus, ContentVersion
 from app.models.media import VideoAsset
 from app.services.llm_client import llm_client
-from app.services.tts_video_client import tts_video_client
 from app.services.translation_service import TARGET_LANGUAGES
+from app.services.tts_video_client import tts_video_client
 
 logger = logging.getLogger(__name__)
 
-def generate_video_script_and_render(db: Session, brand_id: int, topic: str, language: str = "en") -> VideoAsset:
+def generate_video_script_and_render(db: Session, brand_id: int, topic: str, language: str = "en", use_ai_video: bool = False) -> VideoAsset:
     brand = db.query(Brand).filter(Brand.id == brand_id).first()
     if not brand:
         raise ValueError(f"Brand {brand_id} not found")
@@ -68,8 +68,29 @@ Return ONLY the exact spoken words — no stage directions, no scene labels, no 
     if not tts_video_client.generate_audio(script_text, audio_filename):
         raise RuntimeError("TTS audio generation failed")
 
-    # 4. Assemble video
-    tts_video_client.assemble_video(script_text, audio_filename, video_filename, bg_color=brand.color)
+    # 4. Assemble video — AI clip when requested (HunyuanVideo via Replicate),
+    #    deterministic MoviePy render otherwise.
+    ai_clip_path: str | None = None
+    if use_ai_video:
+        from app.services.replicate_client import build_video_prompt, replicate_image_client
+
+        ai_clip_path = replicate_image_client.generate_video(
+            build_video_prompt(script_text), f"aiclip_{uuid.uuid4().hex[:8]}.mp4"
+        )
+        if not ai_clip_path:
+            logger.warning("AI video clip failed — falling back to MoviePy gradient render")
+
+    if ai_clip_path:
+        from pathlib import Path
+
+        from app.services.replicate_client import MEDIA_DIR
+
+        tts_video_client.assemble_video_with_background(
+            script_text, audio_filename, video_filename,
+            background_video_path=str(MEDIA_DIR / Path(ai_clip_path).name),
+        )
+    else:
+        tts_video_client.assemble_video(script_text, audio_filename, video_filename, bg_color=brand.color)
 
     # 5. Save VideoAsset record
     video_asset = VideoAsset(

@@ -77,7 +77,10 @@ class HunterClient:
             candidates: list[str] = []
 
             for a in soup.find_all("a", href=True):
-                href = a["href"].strip().lower()
+                href_value = a.get("href")
+                if not isinstance(href_value, str):
+                    continue
+                href = href_value.strip().lower()
                 if href.startswith("mailto:"):
                     addr = href[len("mailto:"):].split("?")[0].strip()
                     if self._valid_shape(addr):

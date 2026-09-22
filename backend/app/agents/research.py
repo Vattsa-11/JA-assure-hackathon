@@ -1,7 +1,7 @@
 import hashlib
 import logging
 import threading
-import time
+from collections.abc import Iterator
 from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
@@ -143,18 +143,8 @@ Rules:
     return competitors[:6]
 
 
-def research_new_competitors(db: Session, known_urls: list[str] | None = None) -> dict:
-    """Search for NEW competitors we don't track yet, scrape each candidate,
-    and produce a full intelligence digest for the promising ones.
-
-    Returns {found, researched: [{name, url, summary, suggested_action, is_new}],
-             errors: [{url, note}]}.
-    """
-    known = set(known_urls or [])
-    if not known:
-        known = {t.competitor_url for t in db.query(TrackedCompetitor).all()}
-        known |= {e.competitor_url for e in db.query(CompetitorDigestEntry).distinct()}
-
+def _find_new_candidates(known: set[str]) -> list[dict]:
+    """Ask the LLM for up to 4 competitors NOT in the known set (deduplicated)."""
     system_prompt = f"""You are a competitive research analyst for JA Assure, a Singapore commercial insurer.
 {JA_ASSURE_BRIEF}
 Task: identify insurance companies (or insurtech startups) that COMPETE with JA Assure but are NOT in this already-known list:
@@ -172,7 +162,7 @@ Rules:
         temperature=0.4,
     )
     if not raw:
-        return {"found": [], "researched": [], "errors": [{"url": "-", "note": "LLM unavailable"}]}
+        return []
 
     import json as _json
     if raw.startswith("```json"):
@@ -182,7 +172,8 @@ Rules:
     try:
         parsed = _json.loads(raw.strip())
     except _json.JSONDecodeError:
-        return {"found": [], "researched": [], "errors": [{"url": "-", "note": "LLM returned invalid JSON"}]}
+        logger.warning("_find_new_candidates: LLM returned non-JSON output")
+        return []
 
     candidates = []
     seen: set[str] = set()
@@ -198,19 +189,63 @@ Rules:
             "url": url,
             "why": str(item.get("why", ""))[:200],
         })
+    return candidates[:4]
 
-    researched, errors = [], []
-    for c in candidates[:4]:
+
+def iter_research_flow(db: Session, known_urls: list[str] | None = None) -> Iterator[dict]:
+    """Staged new-competitor research flow.
+
+    Yields progress events (dicts) suitable for NDJSON streaming so the UI can
+    show live per-stage/per-URL progress:
+      {"stage": "discover", "status": "start"}
+      {"stage": "discover", "status": "done", "found": N, "candidates": [...]}
+      {"stage": "verify",   "status": "start", "total": N}
+      {"stage": "verify",   "status": "progress", "url": ..., "index": i, "total": N, "result": "ok"|"parked"|"unreachable", "note": ...}
+      {"stage": "verify",   "status": "done", "verified": M}
+      {"stage": "analyze",  "status": "start", "total": M}
+      {"stage": "analyze",  "status": "progress", "url": ..., "index": i, "total": M}
+      {"stage": "analyze",  "status": "done", "researched": R, "errors": E}
+      {"stage": "results",  "status": "done", "researched": [...], "errors": [...]}
+    """
+    known: set[str] = set(known_urls or [])
+    if not known:
+        known = {str(t.competitor_url) for t in db.query(TrackedCompetitor).all()}
+        known |= {str(e.competitor_url) for e in db.query(CompetitorDigestEntry).distinct()}
+
+    # ---- Stage 1: discover candidates via LLM ----
+    yield {"stage": "discover", "status": "start"}
+    candidates = _find_new_candidates(known)
+    yield {"stage": "discover", "status": "done", "found": len(candidates), "candidates": candidates}
+
+    # ---- Stage 2: verify each candidate by scraping it live ----
+    yield {"stage": "verify", "status": "start", "total": len(candidates)}
+    verified: list[dict] = []
+    for i, c in enumerate(candidates, 1):
         scraped = scraping_client.scrape_url(c["url"])
         if not scraped:
-            errors.append({"url": c["url"], "note": "Could not scrape candidate site."})
+            yield {"stage": "verify", "status": "progress", "url": c["url"], "index": i,
+                   "total": len(candidates), "result": "unreachable",
+                   "note": "Could not scrape candidate site."}
             continue
         if _looks_parked(scraped, c["url"]):
-            errors.append({"url": c["url"], "note": "Site looks parked/inactive — skipped."})
+            yield {"stage": "verify", "status": "progress", "url": c["url"], "index": i,
+                   "total": len(candidates), "result": "parked",
+                   "note": "Site looks parked/inactive — skipped."}
             continue
+        verified.append({**c, "scraped": scraped})
+        yield {"stage": "verify", "status": "progress", "url": c["url"], "index": i,
+               "total": len(candidates), "result": "ok"}
+    yield {"stage": "verify", "status": "done", "verified": len(verified)}
 
+    # ---- Stage 3: analyze each verified site with the LLM ----
+    yield {"stage": "analyze", "status": "start", "total": len(verified)}
+    researched: list[dict] = []
+    errors: list[dict] = []
+    for i, c in enumerate(verified, 1):
+        yield {"stage": "analyze", "status": "progress", "url": c["url"], "index": i,
+               "total": len(verified)}
         action = _llm_text(
-            prompt=f"We are evaluating {c['url']} as a competitor. Page text:\n\n{scraped[:3000]}",
+            prompt=f"We are evaluating {c['url']} as a competitor. Page text:\n\n{c['scraped'][:3000]}",
             system_prompt=f"""You are a competitive intelligence analyst for JA Assure.
 {JA_ASSURE_BRIEF}
 Summarise what this competitor offers and give a concrete suggested marketing action for JA Assure.
@@ -221,7 +256,6 @@ Format: 2-4 sentences. First summarise them, then one sentence starting with 'Su
         if not action:
             errors.append({"url": c["url"], "note": "Analysis LLM call failed."})
             continue
-
         researched.append({
             "name": c["name"],
             "url": c["url"],
@@ -229,8 +263,28 @@ Format: 2-4 sentences. First summarise them, then one sentence starting with 'Su
             "summary": action.strip(),
             "is_new": True,
         })
+    yield {"stage": "analyze", "status": "done", "researched": len(researched), "errors": len(errors)}
 
-    return {"found": candidates, "researched": researched, "errors": errors}
+    # ---- Stage 4: results ----
+    yield {"stage": "results", "status": "done", "researched": researched, "errors": errors}
+
+
+def research_new_competitors(db: Session, known_urls: list[str] | None = None) -> dict:
+    """Non-streaming wrapper around iter_research_flow (legacy shape).
+
+    Returns {found, researched: [{name, url, summary, suggested_action, is_new}],
+             errors: [{url, note}]}.
+    """
+    found: list[dict] = []
+    researched: list[dict] = []
+    errors: list[dict] = [{"url": "-", "note": "Research flow did not complete."}]
+    for ev in iter_research_flow(db, known_urls):
+        if ev["stage"] == "discover" and ev["status"] == "done":
+            found = ev.get("candidates", [])
+        if ev["stage"] == "results":
+            researched = ev["researched"]
+            errors = ev["errors"]
+    return {"found": found, "researched": researched, "errors": errors}
 
 
 def scan_tracked_competitors(db: Session, urls: list[str] | None = None) -> dict:
@@ -242,7 +296,7 @@ def scan_tracked_competitors(db: Session, urls: list[str] | None = None) -> dict
     """
     if urls is None:
         watchlist = db.query(TrackedCompetitor).all()
-        urls = [t.competitor_url for t in watchlist if t.status != "unreachable"]
+        urls = [str(t.competitor_url) for t in watchlist if t.status != "unreachable"]
     else:
         urls = [u.strip() for u in urls if u.strip()]
 
@@ -255,17 +309,17 @@ def scan_tracked_competitors(db: Session, urls: list[str] | None = None) -> dict
 
         if not scraped_text:
             if tracked:
-                tracked.consecutive_failures = (tracked.consecutive_failures or 0) + 1
+                tracked.consecutive_failures = (tracked.consecutive_failures or 0) + 1  # type: ignore[assignment]
                 if tracked.consecutive_failures >= _AUTO_SCAN_MAX_FAILURES:
-                    tracked.status = "unreachable"
+                    tracked.status = "unreachable"  # type: ignore[assignment]
                 db.commit()
             results.append({"url": url, "status": "unreachable",
                             "note": "Could not scrape the page (timeout, blocked, or site down)."})
             continue
 
         if tracked:
-            tracked.consecutive_failures = 0
-            tracked.status = "active"
+            tracked.consecutive_failures = 0  # type: ignore[assignment]
+            tracked.status = "active"  # type: ignore[assignment]
             db.commit()
 
         if _looks_parked(scraped_text, url):

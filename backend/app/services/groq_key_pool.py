@@ -17,7 +17,11 @@ class GroqKeyPool:
     def __init__(self, api_keys: list[str]):
         # Preserve order, drop empties/duplicates
         seen: set[str] = set()
-        self._keys = [k for k in api_keys if k and not (k in seen or seen.add(k))]
+        self._keys = []
+        for k in api_keys:
+            if k and k not in seen:
+                seen.add(k)
+                self._keys.append(k)
         self._cooldowns: dict[str, float] = {}  # key -> epoch seconds when it frees up
         self._lock = threading.Lock()
         self._cursor = 0

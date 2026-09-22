@@ -59,7 +59,7 @@ def get_competitor_digests(db: Session = Depends(get_db)):
     for entry in entries:
         if entry.competitor_url in seen:
             continue  # keep only the newest entry per URL
-        seen.add(entry.competitor_url)
+        seen.add(str(entry.competitor_url))
         result.append({
             "id": entry.id,
             "competitor_url": entry.competitor_url,
@@ -166,6 +166,29 @@ def research_new_competitors_endpoint(db: Session = Depends(get_db)):
 
     return _research(db)
 
+
+@router.post("/competitors/research-stream")
+def research_new_competitors_stream(db: Session = Depends(get_db)):
+    """Same flow as /research-new but streams NDJSON progress events so the UI
+    can render live per-stage progress:
+      stage discover (LLM brainstorm) -> verify (live scrape each candidate)
+      -> analyze (LLM intelligence digest per verified site) -> results.
+    One JSON object per line, terminated by newlines.
+    """
+    import json
+
+    from app.agents.research import iter_research_flow
+
+    def event_stream():
+        try:
+            for event in iter_research_flow(db):
+                yield json.dumps(event, ensure_ascii=False) + "\n"
+        except Exception as e:  # noqa: BLE001 - stream an error event instead of dying
+            yield json.dumps({"stage": "error", "status": "failed", "note": str(e)}) + "\n"
+
+    from fastapi.responses import StreamingResponse
+    return StreamingResponse(event_stream(), media_type="application/x-ndjson")
+
 @router.get("/feed")
 def get_feed(db: Session = Depends(get_db)):
     feed = []
@@ -206,6 +229,24 @@ def get_feed(db: Session = Depends(get_db)):
                 "reasons": review.reasons
             } if review else None,
             "lessons": lessons
+        })
+
+    # 1b. AI-generated images
+    from app.models.media import ImageAsset
+
+    for image in db.query(ImageAsset).order_by(ImageAsset.created_at.desc()).all():
+        c_asset = db.query(ContentAsset).filter(ContentAsset.id == image.content_asset_id).first()
+        brand_name = c_asset.brand.name if (c_asset and c_asset.brand) else "Unknown"
+        feed.append({
+            "id": image.id,
+            "type": "IMAGE",
+            "topic": image.topic,
+            "status": "pending_review" if image.status == "generated" else image.status,
+            "brand_name": brand_name,
+            "image_file_path": image.image_file_path,
+            "prompt": image.prompt,
+            "stage": "Image Generated" if image.image_file_path else "Generation Failed",
+            "created_at": image.created_at.isoformat(),
         })
 
     # 2. Leads

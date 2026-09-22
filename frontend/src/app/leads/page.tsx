@@ -1,14 +1,36 @@
 "use client";
 import { useEffect, useState } from 'react';
+import emailjs from '@emailjs/browser';
 import { useLanguage } from '../../i18n/LanguageContext';
 import T from '../../i18n/T';
 import Select from '../../components/Select';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const EMAILJS_SERVICE_ID = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID || '';
+const EMAILJS_TEMPLATE_ID = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID || '';
+const EMAILJS_PUBLIC_KEY = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY || '';
+const EMAILJS_CONFIGURED =
+  !!EMAILJS_SERVICE_ID &&
+  !!EMAILJS_TEMPLATE_ID &&
+  !!EMAILJS_PUBLIC_KEY &&
+  !EMAILJS_PUBLIC_KEY.startsWith('YOUR_');
+
+type Lead = {
+  id: number;
+  business_name: string;
+  website?: string | null;
+  email?: string | null;
+  fit_score?: number | null;
+  status: string;
+  draft_outreach?: string | null;
+  fit_reason?: string | null;
+  region?: string | null;
+  niche?: string | null;
+};
 
 export default function LeadsPage() {
   const { t, language } = useLanguage();
-  const [leads, setLeads] = useState<any[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [expandedLead, setExpandedLead] = useState<number | null>(null);
@@ -16,6 +38,16 @@ export default function LeadsPage() {
   const [region, setRegion] = useState('Singapore');
   const [brandId, setBrandId] = useState('1');
   const [brands, setBrands] = useState<any[]>([]);
+
+  // --- Send-email modal state ---
+  const [mailTarget, setMailTarget] = useState<Lead | null>(null);
+  const [mailForm, setMailForm] = useState({ from: '', to: '', subject: '', body: '' });
+  const [mailState, setMailState] = useState<'editing' | 'sending' | 'sent' | 'error'>('editing');
+
+  // Initialize EmailJS once (safe to call repeatedly, but guard anyway)
+  useEffect(() => {
+    if (EMAILJS_CONFIGURED) emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+  }, []);
 
   const fetchLeads = async () => {
     setLoading(true);
@@ -55,10 +87,61 @@ export default function LeadsPage() {
     }
   };
 
+  // --- Modal controls ---
+  const openMailModal = (lead: Lead) => {
+    setMailTarget(lead);
+    setMailForm({
+      from: '',
+      to: lead.email || '',
+      subject: `Insurance for ${lead.business_name}`,
+      body: lead.draft_outreach || '',
+    });
+    setMailState('editing');
+  };
+
+  const closeMailModal = () => {
+    setMailTarget(null);
+    setMailState('editing');
+  };
+
+  // Approve button: with email -> open the send modal first; without -> approve directly
+  const handleApproveClick = (lead: Lead) => {
+    if (lead.email) openMailModal(lead);
+    else handleApprove(lead.id);
+  };
+
   const handleApprove = async (id: number) => {
     await fetch(`${API_URL}/review/leads/${id}/approve`, { method: 'POST' });
     fetchLeads();
   };
+
+  const handleSendAndApprove = async () => {
+    if (!mailTarget) return;
+    if (!EMAILJS_CONFIGURED) { setMailState('error'); return; }
+    if (!mailForm.from.trim()) { setMailState('error'); return; }
+    setMailState('sending');
+    try {
+      // Params cover the common EmailJS template variable names —
+      // map {{subject}}/{{message}}/{{from_email}}/{{to_email}} in your template.
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        from_name: 'JA Assure',
+        from_email: mailForm.from,
+        reply_to: mailForm.from,
+        to_email: mailForm.to,
+        to_name: mailTarget.business_name,
+        subject: mailForm.subject,
+        message: mailForm.body,
+      });
+      setMailState('sent');
+      await fetch(`${API_URL}/review/leads/${mailTarget.id}/approve`, { method: 'POST' });
+      fetchLeads();
+      setTimeout(closeMailModal, 1200);
+    } catch (e) {
+      console.error('EmailJS send failed:', e);
+      setMailState('error');
+    }
+  };
+
   const handleReject = async (id: number) => {
     await fetch(`${API_URL}/review/leads/${id}/reject`, { method: 'POST' });
     fetchLeads();
@@ -186,13 +269,14 @@ export default function LeadsPage() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flexShrink: 0 }}>
                       {lead.status === 'pending_review' && (
                         <>
-                          <button onClick={() => handleApprove(lead.id)} className="btn btn-primary" style={{ fontSize: '0.85rem', padding: '0.4rem 1rem' }}>{t('leads.approve')}</button>
+                          <button onClick={() => handleApproveClick(lead)} className="btn btn-primary" style={{ fontSize: '0.85rem', padding: '0.4rem 1rem' }}>{t('leads.approve')}</button>
                           <button onClick={() => handleReject(lead.id)} className="btn btn-white" style={{ fontSize: '0.85rem', padding: '0.4rem 1rem', border: '1px solid var(--danger)', color: 'var(--danger)' }}>{t('leads.reject')}</button>
                         </>
                       )}
                       {lead.draft_outreach && (
                         <button onClick={() => setExpandedLead(isExpanded ? null : lead.id)} className="btn btn-white" style={{ fontSize: '0.82rem', padding: '0.4rem 1rem' }}>
-                          {isExpanded ? t('leads.hideEmail') : t('leads.viewEmail')}                        </button>
+                          {isExpanded ? t('leads.hideEmail') : t('leads.viewEmail')}
+                        </button>
                       )}
                     </div>
                   </div>
@@ -227,6 +311,90 @@ export default function LeadsPage() {
           </div>
         )}
       </div>
+
+      {/* Send Email + Approve Modal */}
+      {mailTarget && (
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) closeMailModal(); }}>
+          <div className="modal-content" style={{ maxWidth: '640px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 style={{ margin: 0, fontSize: '1.35rem' }}>{t('leads.mailModal.title')}</h2>
+              <button onClick={closeMailModal} className="btn btn-white" style={{ padding: '0.2rem 0.7rem', fontSize: '1rem', lineHeight: 1.4 }} aria-label="Close">✕</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <div>
+                <label className="modal-label" htmlFor="mail-from">{t('leads.mailModal.from')}</label>
+                <input
+                  id="mail-from"
+                  type="email"
+                  value={mailForm.from}
+                  onChange={e => setMailForm({ ...mailForm, from: e.target.value })}
+                  placeholder="you@jaassure.com"
+                  style={{ width: '100%', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.6rem', fontSize: '0.9rem', background: 'white', color: 'var(--foreground)' }}
+                />
+              </div>
+
+              <div>
+                <label className="modal-label" htmlFor="mail-to">{t('leads.mailModal.to')}</label>
+                <input
+                  id="mail-to"
+                  type="email"
+                  value={mailForm.to}
+                  onChange={e => setMailForm({ ...mailForm, to: e.target.value })}
+                  style={{ width: '100%', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.6rem', fontSize: '0.9rem', background: '#f8f9fc', color: 'var(--foreground)' }}
+                />
+              </div>
+
+              <div>
+                <label className="modal-label" htmlFor="mail-subject">{t('leads.mailModal.subject')}</label>
+                <input
+                  id="mail-subject"
+                  value={mailForm.subject}
+                  onChange={e => setMailForm({ ...mailForm, subject: e.target.value })}
+                  style={{ width: '100%', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.6rem', fontSize: '0.9rem', background: 'white', color: 'var(--foreground)' }}
+                />
+              </div>
+
+              <div>
+                <label className="modal-label" htmlFor="mail-body">{t('leads.mailModal.body')}</label>
+                <textarea
+                  id="mail-body"
+                  value={mailForm.body}
+                  onChange={e => setMailForm({ ...mailForm, body: e.target.value })}
+                  rows={10}
+                  style={{ width: '100%', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.6rem', fontSize: '0.87rem', lineHeight: 1.6, resize: 'vertical', fontFamily: 'inherit', background: 'white', color: 'var(--foreground)' }}
+                />
+              </div>
+
+              {mailState === 'error' && (
+                <div style={{ background: '#fee2e2', border: '1px solid #ef4444', color: '#991b1b', borderRadius: '8px', padding: '0.65rem 1rem', fontSize: '0.85rem' }}>
+                  {!EMAILJS_CONFIGURED ? t('leads.mailModal.notConfigured') : mailForm.from.trim() ? t('leads.mailModal.failed') : t('leads.mailModal.sendFirst')}
+                </div>
+              )}
+
+              <div className="modal-actions" style={{ marginTop: '0.25rem' }}>
+                <button onClick={closeMailModal} className="btn" style={{ background: 'white', color: 'var(--foreground)', border: '1px solid var(--border)' }}>
+                  {t('dash.modal.cancel')}
+                </button>
+                <button
+                  onClick={handleApprove.bind(null, mailTarget.id)}
+                  className="btn"
+                  style={{ background: 'white', color: 'var(--foreground)', border: '1px solid var(--border)' }}
+                >
+                  {t('dash.modal.approveAsIs')}
+                </button>
+                <button
+                  onClick={handleSendAndApprove}
+                  disabled={mailState === 'sending' || mailState === 'sent'}
+                  className="btn btn-success"
+                >
+                  {mailState === 'sending' ? t('leads.mailModal.sending') : mailState === 'sent' ? t('leads.mailModal.sent') : t('leads.mailModal.send')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

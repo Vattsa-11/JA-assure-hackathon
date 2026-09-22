@@ -21,6 +21,7 @@ export default function UnifiedDashboard() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
   const [generateVideo, setGenerateVideo] = useState(false);
+  const [generateImage, setGenerateImage] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Form State
@@ -33,6 +34,16 @@ export default function UnifiedDashboard() {
   const [isRejecting, setIsRejecting] = useState(false);
   const [rejectTag, setRejectTag] = useState("tone");
   const [rejectNote, setRejectNote] = useState("");
+
+  // Publish (Postiz) modal state
+  const [publishItem, setPublishItem] = useState<any | null>(null);
+  const [publishText, setPublishText] = useState("");
+  const [integrations, setIntegrations] = useState<any[]>([]);
+  const [integrationsLoaded, setIntegrationsLoaded] = useState(false);
+  const [selectedChannels, setSelectedChannels] = useState<Set<string>>(new Set());
+  const [publishState, setPublishState] = useState<'idle' | 'publishing' | 'published' | 'error'>('idle');
+  const [publishError, setPublishError] = useState<string | null>(null);
+  const [postizConfigured, setPostizConfigured] = useState(true);
 
   const fetchDashboard = async () => {
     try {
@@ -83,6 +94,14 @@ export default function UnifiedDashboard() {
           body: JSON.stringify({ brand_id: parseInt(selectedBrand), topic, language })
         });
       }
+
+      if (generateImage) {
+        await fetch(`${API_URL}/pipeline/image/run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ brand_id: parseInt(selectedBrand), topic, language })
+        });
+      }
       
       setTopic("");
       fetchDashboard();
@@ -93,11 +112,51 @@ export default function UnifiedDashboard() {
     }
   };
 
+  // Open the Postiz publish popup (channel picker + content preview)
+  const openPublishModal = async (item: any, text: string) => {
+    setPublishItem(item);
+    setPublishText(text);
+    setPublishState('idle');
+    setPublishError(null);
+    setSelectedChannels(new Set());
+    setIntegrations([]);
+    setIntegrationsLoaded(false);
+    try {
+      const [statusRes, intRes] = await Promise.all([
+        fetch(`${API_URL}/publish/status`),
+        fetch(`${API_URL}/publish/integrations`),
+      ]);
+      if (statusRes.ok) {
+        const st = await statusRes.json();
+        setPostizConfigured(!!st.configured);
+      }
+      if (intRes.ok) {
+        const chans = await intRes.json();
+        setIntegrations(chans);
+        // Pre-select channels matching the asset's platform (twitter -> x, ...)
+        const map: Record<string, string> = { twitter: 'x', linkedin: 'linkedin', facebook: 'facebook', instagram: 'instagram' };
+        const want = map[(item.platform || '').toLowerCase()];
+        const pre = new Set(
+          (chans as any[])
+            .filter(c => !c.disabled && (!want || c.identifier === want || c.identifier === `${want}-page`))
+            .map(c => c.id)
+        );
+        setSelectedChannels(pre);
+      }
+    } catch (e) { console.error(e); }
+    setIntegrationsLoaded(true);
+  };
+
   const handleApprove = async (id: number) => {
     try {
       await fetch(`${API_URL}/review/${id}/approve`, { method: 'POST' });
       fetchDashboard();
+      const item = viewingItem;
       closeModal();
+      // Campaign content: show the publish popup after approval
+      if (item && item.type === 'TEXT') {
+        openPublishModal(item, editText);
+      }
     } catch (e: any) { alert(e.message); }
   };
 
@@ -110,8 +169,50 @@ export default function UnifiedDashboard() {
         body: JSON.stringify({ new_content_text: editText })
       });
       fetchDashboard();
+      const item = viewingItem;
       closeModal();
+      if (item.type === 'TEXT') {
+        openPublishModal(item, editText);
+      }
     } catch (e: any) { alert(e.message); }
+  };
+
+  const toggleChannel = (id: string) => {
+    setSelectedChannels(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handlePublishNow = async () => {
+    if (!publishItem || selectedChannels.size === 0) return;
+    setPublishState('publishing');
+    setPublishError(null);
+    try {
+      const res = await fetch(`${API_URL}/publish/posts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          asset_id: publishItem.id,
+          integration_ids: Array.from(selectedChannels),
+          content_override: publishText,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || `Publish failed: ${res.status}`);
+      setPublishState('published');
+      fetchDashboard();
+      setTimeout(() => closePublishModal(), 1400);
+    } catch (e: any) {
+      setPublishState('error');
+      setPublishError(e.message);
+    }
+  };
+
+  const closePublishModal = () => {
+    setPublishItem(null);
+    setPublishState('idle');
   };
 
   const handleReject = async (e: React.FormEvent) => {
@@ -202,6 +303,10 @@ export default function UnifiedDashboard() {
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>
                   <input type="checkbox" checked={generateVideo} onChange={e => setGenerateVideo(e.target.checked)} style={{ width: 'auto' }} />
                   {t('dash.includeVideo')}
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 600 }}>
+                  <input type="checkbox" checked={generateImage} onChange={e => setGenerateImage(e.target.checked)} style={{ width: 'auto' }} />
+                  {t('dash.includeImage')}
                 </label>
               </div>
               <button type="submit" className="btn" disabled={isGenerating} style={{ background: 'white', color: 'var(--foreground)', height: '48px', padding: '0 2rem', fontWeight: 700 }}>
@@ -297,8 +402,11 @@ export default function UnifiedDashboard() {
 
                       {/* Content Preview */}
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.25rem', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.25rem', alignItems: 'center', flexWrap: 'wrap' }}>
                           <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--foreground)' }}>{(item.brand_name || item.business_name) as string}</span>
+                          {item.type === 'LEAD'
+                            ? <span className="tag" style={{ fontSize: '0.65rem', background: 'var(--pastel-green)', color: '#065f46' }}>{t('dash.tagLead')}</span>
+                            : <span className="tag" style={{ fontSize: '0.65rem', background: 'var(--pastel-blue)', color: 'var(--foreground)' }}>{t('dash.tagCampaign')}</span>}
                           {displayPlatform && <span className="tag" style={{ fontSize: '0.65rem', background: 'var(--pastel-blue)', color: 'var(--foreground)' }}>{(displayPlatform as string).toUpperCase()}</span>}
                           {isBlocked && <span className="tag tag-danger" style={{ fontSize: '0.65rem' }}>{t('dash.inspectorBlocked')}</span>}
                           {isRejected && <span className="tag tag-danger" style={{ fontSize: '0.65rem' }}>{t('dash.rejected')}</span>}
@@ -308,6 +416,11 @@ export default function UnifiedDashboard() {
                           {item.type === 'TEXT' && <T text={(item.content_text as string)?.replace(/\n/g, ' ')} />}
                           {item.type === 'LEAD' && <T text={item.draft_outreach as string} />}
                           {item.type === 'VIDEO' && "Video script generated"}
+                          {item.type === 'IMAGE' && (
+                            item.image_file_path
+                              ? <img src={`${API_URL}/media/${(item.image_file_path as string).split(/[\\/]/).pop()}`} alt={item.topic as string} style={{ maxWidth: '120px', maxHeight: '80px', borderRadius: '8px', objectFit: 'cover', verticalAlign: 'middle' }} />
+                              : <span style={{ color: 'var(--danger)' }}>Image generation failed</span>
+                          )}
                         </div>
                         
                         {/* Lessons Visual cue */}
@@ -436,6 +549,104 @@ export default function UnifiedDashboard() {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Approve & Publish Modal (Postiz) */}
+      {publishItem && (
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) closePublishModal(); }}>
+          <div className="modal-content" style={{ maxWidth: '640px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', alignItems: 'center' }}>
+              <h2 style={{ margin: 0, fontSize: '1.5rem' }}>{t('dash.publish.title')}</h2>
+              <span className="tag tag-primary">{publishItem.platform ? (publishItem.platform as string).toUpperCase() : (publishItem.type as string)}</span>
+            </div>
+            <p style={{ margin: '0 0 1.25rem', opacity: 0.65, fontSize: '0.9rem' }}>{t('dash.publish.subtitle')}</p>
+
+            {!postizConfigured && (
+              <div style={{ background: '#fef3c7', border: '1px solid #f59e0b', color: '#92400e', borderRadius: '8px', padding: '0.7rem 1rem', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                {t('dash.publish.notConfigured')}
+              </div>
+            )}
+
+            {/* Content preview */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>{t('dash.publish.content')}</label>
+              <textarea
+                rows={7}
+                value={publishText}
+                onChange={e => setPublishText(e.target.value)}
+                style={{ resize: 'vertical', width: '100%', padding: '1rem', borderRadius: '12px', border: '1px solid var(--card-border)', fontFamily: 'inherit', fontSize: '0.9rem', outline: 'none' }}
+              />
+            </div>
+
+            {/* Channel picker */}
+            <div style={{ marginBottom: '1.25rem' }}>
+              <label style={{ display: 'block', fontWeight: 600, marginBottom: '0.5rem' }}>{t('dash.publish.channels')}</label>
+              {!integrationsLoaded ? (
+                <div style={{ opacity: 0.5, fontSize: '0.9rem' }}>...</div>
+              ) : integrations.length === 0 ? (
+                <div style={{ opacity: 0.65, fontSize: '0.85rem' }}>{t('dash.publish.noChannels')}</div>
+              ) : (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
+                  {integrations.map(ch => {
+                    const active = selectedChannels.has(ch.id);
+                    return (
+                      <button
+                        key={ch.id}
+                        type="button"
+                        onClick={() => toggleChannel(ch.id)}
+                        disabled={ch.disabled}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '0.5rem',
+                          padding: '0.5rem 0.9rem', borderRadius: '50px', cursor: 'pointer',
+                          border: active ? '2px solid var(--foreground)' : '1px solid var(--border)',
+                          background: active ? 'var(--pastel-blue)' : 'white',
+                          color: 'var(--foreground)', fontWeight: active ? 700 : 500,
+                          opacity: ch.disabled ? 0.4 : 1,
+                        }}
+                      >
+                        {ch.picture
+                          ? <img src={ch.picture} alt="" style={{ width: '20px', height: '20px', borderRadius: '50%' }} />
+                          : <span style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'var(--pastel-blue)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 800 }}>{(ch.identifier || '?').charAt(0).toUpperCase()}</span>}
+                        <span style={{ fontSize: '0.85rem' }}>{ch.name}</span>
+                        <span style={{ fontSize: '0.65rem', opacity: 0.6 }}>({ch.identifier})</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {publishError && (
+              <div style={{ background: '#fee2e2', border: '1px solid #ef4444', color: '#991b1b', borderRadius: '8px', padding: '0.65rem 1rem', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                {publishError}
+              </div>
+            )}
+            {publishState === 'published' && (
+              <div style={{ background: '#d1fae5', border: '1px solid #10b981', color: '#065f46', borderRadius: '8px', padding: '0.65rem 1rem', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                {t('dash.publish.published')}
+              </div>
+            )}
+
+            <div className="modal-actions">
+              <button
+                type="button"
+                className="btn"
+                onClick={() => { closePublishModal(); fetchDashboard(); }}
+                style={{ background: 'white', color: 'var(--foreground)', border: '1px solid var(--border)' }}
+              >
+                {publishState === 'published' ? t('dash.publish.approvedNote') : t('dash.publish.approveOnly')}
+              </button>
+              <button
+                type="button"
+                className="btn btn-success"
+                onClick={handlePublishNow}
+                disabled={publishState === 'publishing' || publishState === 'published' || !postizConfigured || selectedChannels.size === 0}
+              >
+                {publishState === 'publishing' ? t('dash.publish.publishing') : publishState === 'published' ? t('dash.publish.published') : t('dash.publish.publishNow')}
+              </button>
+            </div>
           </div>
         </div>
       )}

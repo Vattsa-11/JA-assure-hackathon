@@ -9,6 +9,8 @@ langchain-groq
 playwright
 beautifulsoup4
 requests
+dnspython
 edge-tts
 moviepy
+replicate
 pytest

@@ -7,3 +7,6 @@ _trash/
 .pytest_cache/
 .next/
 media/*.mp4
+backend.log
+frontend.log
+media/*.jpg

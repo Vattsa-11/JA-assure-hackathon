@@ -14,6 +14,22 @@ class Settings(BaseSettings):
     DATABASE_URL: str = f"sqlite:///{_DEFAULT_DB_PATH}"
     HUNTER_API_KEY: str | None = None
 
+    # Postiz social publishing (https://postiz.com). When POSTIZ_API_KEY is set,
+    # approved campaigns can be published straight from the review modal.
+    POSTIZ_API_KEY: str | None = None
+    POSTIZ_API_URL: str = "https://api.postiz.com/public/v1"
+
+    # Image generation provider: "pollinations" (free, no key) | "replicate" | "auto"
+    # (auto = pollinations first, replicate fallback)
+    IMAGE_PROVIDER: str = "auto"
+    # Replicate image generation (https://replicate.com/account/api-tokens)
+    REPLICATE_API_TOKEN: str | None = None
+    REPLICATE_IMAGE_MODEL: str = "tencent/hunyuan-image-2.1"
+    # Text-to-video model slot (default: HunyuanVideo on Replicate).
+    # HunyuanVideo-1.5 is Hugging Face weights-only today; point this at any
+    # hosted 1.5 endpoint (Replicate/fal/custom) to switch — no code change.
+    REPLICATE_VIDEO_MODEL: str = "tencent/hunyuan-video"
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     @property
@@ -26,7 +42,12 @@ class Settings(BaseSettings):
         """
         keys = [*self.GROQ_API_KEY.split(","), *self.GROQ_API_KEYS.split(",")]
         seen: set[str] = set()
-        unique = [k.strip() for k in keys if k.strip() and not (k.strip() in seen or seen.add(k.strip()))]
+        unique = []
+        for raw in keys:
+            k = raw.strip()
+            if k and k not in seen:
+                seen.add(k)
+                unique.append(k)
         return unique
 
 settings = Settings()

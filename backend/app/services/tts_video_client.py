@@ -144,6 +144,85 @@ class TTSVideoClient:
             logger.error(f"Failed to assemble video: {e!s}")
             return False
 
+    def assemble_video_with_background(
+        self, script_text: str, audio_path: str, output_video_path: str,
+        background_video_path: str | None = None,
+    ) -> bool:
+        """Assemble variant that uses an AI-generated video clip as the background.
+
+        The clip is looped/cropped to cover the full audio duration; captions are
+        overlaid exactly like the gradient version. Falls back to False so the
+        caller can retry with the plain gradient render.
+        """
+        if MOVIEPY_V2 is None:
+            logger.error("MoviePy not installed. Cannot assemble video.")
+            return False
+        if not background_video_path or not os.path.exists(background_video_path):
+            logger.warning("AI background clip missing — caller should fall back")
+            return False
+
+        try:
+            from moviepy import VideoFileClip
+
+            audio_clip = AudioFileClip(audio_path)
+            duration = audio_clip.duration
+            bg = VideoFileClip(background_video_path)
+
+            # Loop the AI clip until it covers the narration, then fit to 1080x1920
+            loops = max(1, int(duration / max(bg.duration, 0.1)) + 1)
+            if MOVIEPY_V2:
+                from moviepy.video.compositing.CompositeVideoClip import concatenate_videoclips
+                bg_clip = concatenate_videoclips([bg] * loops, method="chain")
+                bg_clip = bg_clip.subclipped(0, duration).resized((1080, 1920))
+            else:
+                bg_clip = bg.set_duration(duration).crop(x1=0, y1=0, width=1080, height=1920)
+
+            words = script_text.split()
+            if not words:
+                words = ["(No", "audio)"]
+            chunk_size = 7
+            chunks = [" ".join(words[i:i+chunk_size]) for i in range(0, len(words), chunk_size)]
+            words_per_sec = len(words) / duration if duration > 0 else 1
+
+            clips = [bg_clip]
+            current_time = 0.0
+            for chunk in chunks:
+                chunk_duration = len(chunk.split()) / words_per_sec
+                if current_time >= duration:
+                    break
+                if current_time + chunk_duration > duration:
+                    chunk_duration = duration - current_time
+                try:
+                    def pos_func(t):
+                        y_pos = max(900, int(1200 - (600 * t)))
+                        return ("center", y_pos)
+
+                    txt_clip = (
+                        TextClip(
+                            text=chunk, font_size=80, color="white",
+                            size=(900, None), method="caption",
+                        )
+                        .with_position(pos_func)
+                        .with_start(current_time)
+                        .with_duration(chunk_duration)
+                    )
+                    clips.append(txt_clip)
+                except Exception as e:  # noqa: BLE001 - fail-soft per caption
+                    logger.warning(f"TextClip failed for chunk: {e}")
+                current_time += chunk_duration
+
+            video = CompositeVideoClip(clips).with_audio(audio_clip)
+            video.write_videofile(
+                output_video_path, fps=24, codec="libx264",
+                audio_codec="aac", preset="ultrafast", logger=None,
+            )
+            audio_clip.close()
+            video.close()
+            return os.path.exists(output_video_path)
+        except Exception as e:  # noqa: BLE001 - fail-soft: caller falls back to gradient
+            logger.error(f"AI-background assembly failed: {e!s}")
+            return False
+
     @staticmethod
     def get_media_path(filename: str) -> str:
         """Returns an absolute path inside the project media/ directory."""

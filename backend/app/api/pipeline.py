@@ -6,8 +6,8 @@ from app.graphs.content_pipeline import ContentState, content_graph
 from app.graphs.lead_pipeline import LeadState, lead_graph
 from app.schemas.pipeline import (
     ContentRunRequest,
+    ImageRunRequest,
     LeadRunRequest,
-    ResearchRunRequest,
     VideoRunRequest,
 )
 
@@ -71,34 +71,37 @@ def run_video_pipeline(request: VideoRunRequest, background_tasks: BackgroundTas
     """
     Triggers video script generation + TTS + assembly as a background task.
     """
-    def _run_video(brand_id: int, topic: str, language: str = "en"):
+    def _run_video(brand_id: int, topic: str, language: str = "en", use_ai_video: bool = False):
         from app.agents.media import generate_video_script_and_render
         from app.core.db import SessionLocal
         db = SessionLocal()
         try:
-            generate_video_script_and_render(db, brand_id, topic, language)
+            generate_video_script_and_render(db, brand_id, topic, language, use_ai_video)
         except Exception as e:  # noqa: BLE001 - fail-soft over external service I/O
             logger.error(f"Video pipeline error: {e}")
         finally:
             db.close()
 
-    background_tasks.add_task(_run_video, request.brand_id, request.topic, request.language or "en")
+    background_tasks.add_task(_run_video, request.brand_id, request.topic, request.language or "en", request.use_ai_video)
     return {"message": "Video pipeline started in background."}
 
-@router.post('/research/run')
-def run_research_pipeline(request: ResearchRunRequest, background_tasks: BackgroundTasks):
-    def _run_research(urls: list[str]):
-        from app.agents.research import run_competitor_digest
+@router.post("/image/run")
+def run_image_pipeline(request: ImageRunRequest, background_tasks: BackgroundTasks):
+    """
+    Triggers AI image generation (LLM visual brief -> Replicate) as a background task.
+    The resulting ImageAsset + ContentAsset appear in the dashboard feed.
+    """
+    def _run_image(brand_id: int, topic: str, language: str = "en"):
+        from app.agents.image import generate_campaign_image
         from app.core.db import SessionLocal
         db = SessionLocal()
         try:
-            results = run_competitor_digest(db, urls)
-            logger.info(f'Research pipeline done. Digested {len(results)} updates.')
+            generate_campaign_image(db, brand_id, topic, language)
         except Exception as e:  # noqa: BLE001 - fail-soft over external service I/O
-            logger.error(f'Research pipeline error: {e}')
+            logger.error(f"Image pipeline error: {e}")
         finally:
             db.close()
 
-    background_tasks.add_task(_run_research, request.urls)
-    return {'message': 'Research pipeline started in background.'}
+    background_tasks.add_task(_run_image, request.brand_id, request.topic, request.language or "en")
+    return {"message": "Image pipeline started in background."}
 

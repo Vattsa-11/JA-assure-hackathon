@@ -3,6 +3,7 @@ import logging
 import re
 import threading
 import time
+from typing import Any
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -58,7 +59,7 @@ def _llm_translate_batch(texts: list[str], target_language: str) -> list[str]:
         + language_full
         + "."
     )
-    result = None
+    result: dict[str, Any] | None = None
     for attempt in range(MAX_BATCH_RETRIES):
         try:
             result = llm_client.generate_json(
@@ -68,7 +69,7 @@ def _llm_translate_batch(texts: list[str], target_language: str) -> list[str]:
                 temperature=0.2,
             )
             break
-        except Exception as e:  # noqa: BLE001 - rate limits & transient provider errors
+        except Exception as e:
             if attempt == MAX_BATCH_RETRIES - 1:
                 raise
             wait = 15.0
@@ -83,7 +84,7 @@ def _llm_translate_batch(texts: list[str], target_language: str) -> list[str]:
 
     translations: list[str] = []
     for i, original in enumerate(texts):
-        translated = result.get(str(i))
+        translated = result.get(str(i)) if isinstance(result, dict) else None
         if not isinstance(translated, str) or not translated.strip():
             # Fail soft per item: keep original rather than dropping the row
             logger.warning(f"Translation missing for index {i}; keeping original text.")
@@ -121,6 +122,7 @@ def get_translations(
         return {}
 
     # URLs/emails have nothing to translate — pass through, never cache
+    result: dict[str, str] = {}
     passthrough: list[str] = []
     translatable: list[str] = []
     for text in unique_texts:
@@ -135,7 +137,6 @@ def get_translations(
     if not unique_texts:
         return result
 
-    result: dict[str, str] = {}
     misses: list[str] = []
 
     hashes = {text: _hash_text(text) for text in unique_texts}
@@ -184,7 +185,7 @@ def get_translations(
             for text in batch:
                 result[text] = text  # graceful fallback: original text
             continue
-        for text, translated in zip(batch, translations):
+        for text, translated in zip(batch, translations, strict=False):
             result[text] = translated
             db.add(
                 TranslationCache(

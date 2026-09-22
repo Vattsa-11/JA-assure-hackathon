@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.dashboard import router as dashboard_router
 from app.api.pipeline import router as pipeline_router
+from app.api.publish import router as publish_router
 from app.api.review import router as review_router
 from app.api.translate import router as translate_router
 
@@ -31,6 +32,7 @@ app.include_router(review_router)
 app.include_router(pipeline_router)
 app.include_router(dashboard_router)
 app.include_router(translate_router)
+app.include_router(publish_router)
 
 # Mount media directory for videos
 media_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "media"))

@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 
 from app.core.db import get_db
 from app.services.translation_service import (
-    TARGET_LANGUAGES,
     get_translations,
     warm_language_caches,
 )
@@ -37,7 +36,7 @@ def translate_texts(request: TranslateRequest, db: Session = Depends(get_db)):
     try:
         translations = get_translations(db, request.texts, request.target_language)
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     return TranslateResponse(translations=translations, target_language=request.target_language)
 
 
