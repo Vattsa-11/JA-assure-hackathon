@@ -1,6 +1,7 @@
 # JA-Assure Autonomous Marketing Agent
 
-![System Architecture](docs/architecture/system-architecture.png)
+![System Architecture]<img width="1608" height="874" alt="JA-Assure Autonomous Marketing Architecture" src="https://github.com/user-attachments/assets/340cbd05-476f-4136-8b82-cf42a336e22d" />
+
 
 > **An autonomous marketing brain for insurance.** It finds real businesses, researches them live, drafts on-brand multilingual content, enforces insurance compliance with a second AI opinion, learns from every human rejection, renders its own images and videos, and publishes to email and social channels — all under one human approval click.
 
